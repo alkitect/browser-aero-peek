@@ -29,7 +29,7 @@ On **Linux Ubuntu + GNOME Wayland**, show browser **tab titles, favicons, and ca
 ## Trust
 
 - Session bus + `$XDG_RUNTIME_DIR` socket = same-UID boundary.
-- NM `allowed_origins` single extension ID per written manifest; isolation seam = registry + per-browser NM dirs + per-browser host routing (not separate host processes). **Multi-NM (Brave + Chrome + Opera deb + Opera Flatpak + Vivaldi):** same MV3 id written into five NativeMessagingHosts dirs (Flatpak under `~/.var/app/...`); ListTabs/Activate carry the browser key so same-UID socket traffic stays lane-scoped. Flatpak NM JSON uses `browser-tabs-nm-flatpak` → `flatpak-spawn --host` (sandbox has no host sock / no `gi`); overrides also expose the staged MV3 share dir for durable Load unpacked.
+- NM `allowed_origins` single extension ID per written manifest; isolation seam = registry + per-browser NM dirs + per-browser host routing (not separate host processes). **Multi-NM (Brave + Chrome + Opera deb + Opera Flatpak + Vivaldi + Chromium Snap):** same MV3 id written into per-browser NativeMessagingHosts dirs (Flatpak under `~/.var/app/...`, Snap under `~/snap/...`); ListTabs/Activate carry the browser key so same-UID socket traffic stays lane-scoped. Flatpak NM JSON uses `browser-tabs-nm-flatpak` → `flatpak-spawn --host`. Snap Chromium uses `~/bin/browser-tabs-nm-snap` with **install-time absolute** host + home-sock paths (Snap remaps `$HOME`; strict snap cannot use host runtime-dir socks / `~/.local/bin`).
 
 ## See also
 

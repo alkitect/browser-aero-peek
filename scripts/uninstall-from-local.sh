@@ -23,6 +23,9 @@ rm -f "${BIN}/browser-tabs-host" "${BIN}/browser-tabs-nm" "${BIN}/browser-tabs-n
 rm -rf "${CFG_DIR}"
 rm -rf "${SHARE_DIR}/mv3-opera-flatpak"
 rm -rf "${SHARE_DIR}/mv3-vivaldi"
+rm -rf "${SHARE_DIR}/mv3-chromium"
+rm -f "${HOME}/bin/browser-tabs-nm-snap"
+rm -f "${HOME}/bin/browser-tabs-host"
 
 if [[ -f "${BROWSERS_JSON}" ]]; then
   python3 - <<PY

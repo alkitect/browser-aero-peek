@@ -66,6 +66,20 @@ exec flatpak-spawn --host "${BIN}/browser-tabs-nm" "\$@"
 EOF
 chmod 0755 "${BIN}/browser-tabs-nm-flatpak"
 
+# Snap Chromium: cannot exec ~/.local/bin or host XDG_RUNTIME_DIR socks (AppArmor).
+# Bridge lives under ~/bin (non-hidden). Bake absolute paths — Snap remaps \$HOME to
+# ~/snap/chromium/<rev>/ so "\${HOME}/bin/..." resolves inside the snap tree and 404s.
+HOME_BIN="${HOME}/bin"
+SNAP_SOCK="${HOME}/alkitect-browser-tabs/browser-tabs.sock"
+mkdir -p "${HOME_BIN}" "$(dirname "${SNAP_SOCK}")"
+install -m0755 "${BIN}/browser-tabs-host" "${HOME_BIN}/browser-tabs-host"
+cat >"${HOME_BIN}/browser-tabs-nm-snap" <<EOF
+#!/usr/bin/env bash
+export ALKITECT_BROWSER_TABS_SOCK="${SNAP_SOCK}"
+exec "${HOME_BIN}/browser-tabs-host" native "\$@"
+EOF
+chmod 0755 "${HOME_BIN}/browser-tabs-nm-snap"
+
 # Stage Flatpak-oriented MV3 copy with forced browser id (same extension-id / key).
 FLATPAK_EXT="${SHARE_DIR}/mv3-opera-flatpak"
 rm -rf "${FLATPAK_EXT}"
@@ -80,6 +94,13 @@ mkdir -p "${VIVALDI_EXT}"
 cp -a "${ROOT}/browser-extension/." "${VIVALDI_EXT}/"
 printf '%s\n' 'var FORCED_BROWSER_ID = "vivaldi";' >"${VIVALDI_EXT}/forced-browser-id.js"
 
+# Snap Chromium: same reduced-UA risk + confinement — stage forced id.
+CHROMIUM_EXT="${SHARE_DIR}/mv3-chromium"
+rm -rf "${CHROMIUM_EXT}"
+mkdir -p "${CHROMIUM_EXT}"
+cp -a "${ROOT}/browser-extension/." "${CHROMIUM_EXT}/"
+printf '%s\n' 'var FORCED_BROWSER_ID = "chromium";' >"${CHROMIUM_EXT}/forced-browser-id.js"
+
 # NM manifests: only enabled chromium-schema browsers (mozilla reserved for later waves).
 python3 - <<PY
 import json
@@ -91,6 +112,7 @@ root = Path("${ROOT}")
 ext_id = "${EXT_ID}"
 bin_nm = str(Path("${BIN}/browser-tabs-nm").resolve())
 bin_nm_flatpak = str(Path("${BIN}/browser-tabs-nm-flatpak").resolve())
+bin_nm_snap = str((Path.home() / "bin" / "browser-tabs-nm-snap").resolve())
 home = Path.home()
 cfg_home = Path(os.environ.get("XDG_CONFIG_HOME") or (home / ".config"))
 data = json.loads(Path("${BROWSERS_JSON}").read_text())
@@ -134,6 +156,14 @@ def write_nm(nm_dir: Path, path: str) -> None:
     print("path:", out["path"])
     print("allowed_origins:", out["allowed_origins"])
 
+def nm_bin_for(entry) -> str:
+    pkg = entry.get("packaging")
+    if pkg == "flatpak":
+        return bin_nm_flatpak
+    if pkg == "snap":
+        return bin_nm_snap
+    return bin_nm
+
 for entry in data["browsers"]:
     unknown = set(entry) - ALLOWED_KEYS
     if unknown:
@@ -155,7 +185,7 @@ for entry in data["browsers"]:
     if schema != "chromium":
         print(f"install: skip enabled non-chromium {bid} (schema={schema})", file=sys.stderr)
         continue
-    nm_bin = bin_nm_flatpak if entry.get("packaging") == "flatpak" else bin_nm
+    nm_bin = nm_bin_for(entry)
     write_nm(resolve_nm_dir(entry, nm_path), nm_bin)
     for alias in entry.get("nm_path_aliases") or []:
         write_nm(resolve_nm_dir(entry, alias), nm_bin)
@@ -216,7 +246,7 @@ elif [[ -n "${ALKITECT_CI_TMP:-}" ]]; then
 fi
 
 echo
-echo "Next (enabled browsers — Brave + Chrome + Opera deb + Opera Flatpak + Vivaldi):"
+echo "Next (enabled browsers — Brave + Chrome + Opera deb + Opera Flatpak + Vivaldi + Chromium Snap):"
 echo "  Brave:  brave://extensions  → Load unpacked → ${ROOT}/browser-extension"
 echo "  Chrome: chrome://extensions → Load unpacked → ${ROOT}/browser-extension"
 echo "  Opera (.deb): opera://extensions → Load unpacked → ${ROOT}/browser-extension"
@@ -224,12 +254,14 @@ echo "  Opera (Flatpak): opera://extensions → Remove portal loads → Load unp
 echo "       (forced hello browserId=opera-flatpak; NM via flatpak-spawn --host; same extension ID ${EXT_ID})"
 echo "  Vivaldi: vivaldi://extensions → Remove shared-folder load → Load unpacked → ${VIVALDI_EXT}"
 echo "       (forced hello browserId=vivaldi; same extension ID ${EXT_ID} — reduced UA looks like Chrome)"
+echo "  Chromium (Snap): chrome://extensions → Remove portal loads (/run/user/*/doc/…) → Load unpacked → ${CHROMIUM_EXT}"
+echo "       (forced hello browserId=chromium; NM via ~/bin/browser-tabs-nm-snap with absolute host/sock paths; same ID ${EXT_ID})"
 echo "  Confirm ID is ${EXT_ID}; fully quit and relaunch each browser"
 echo "  browser-tabs-host cli status"
-echo "  browser-tabs-host cli list --browser brave|chrome|opera|opera-flatpak|vivaldi"
+echo "  browser-tabs-host cli list --browser brave|chrome|opera|opera-flatpak|vivaldi|chromium"
 echo
 echo "Next (Shell hover peek — Wayland needs logout/in):"
 echo "  gnome-extensions enable ${EXT_UUID}"
 echo "  then log out and back in"
-echo "  Hover Brave / Chrome / Opera (.deb or Flatpak) / Vivaldi dock icon (1 window, ≥2 tabs)"
+echo "  Hover Brave / Chrome / Opera (.deb or Flatpak) / Vivaldi / Chromium dock icon (1 window, ≥2 tabs)"
 echo "  ./scripts/verify-e2e.sh   # human checklist"

@@ -81,6 +81,11 @@ const BROWSER_MATCHERS = [
         desktopIds: ['vivaldi-stable.desktop', 'vivaldi-stable'],
         wmClasses: ['vivaldi-stable', 'Vivaldi-stable'],
     },
+    {
+        id: 'chromium',
+        desktopIds: ['chromium_chromium.desktop', 'chromium-browser.desktop', 'chromium.desktop'],
+        wmClasses: ['chromium', 'chromium-browser', 'Chromium-browser'],
+    },
 ];
 
 let _proxy = null;

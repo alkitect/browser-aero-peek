@@ -43,7 +43,7 @@ if grep -q 'PopupImageMenuItem\|PopupMenuItem' "$SRC"; then
   fail "source still uses PopupMenuItem (ornament padding)"
 fi
 if [[ -f "$META" ]]; then
-  grep -q '"version": 15' "$META" || fail "metadata.json version must be 15"
+  grep -q '"version": 16' "$META" || fail "metadata.json version must be 16"
 fi
 
 # Every enabled registry id must appear in extension.js matcher table.

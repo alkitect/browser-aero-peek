@@ -8,7 +8,7 @@ README variant: B
 
 **First public tag: v0.2.9**
 
-**Current tag: v0.5.0**
+**Current tag: v0.6.0**
 
 **V-001 count (organic, not invent / not copy):**
 
@@ -22,16 +22,17 @@ README variant: B
 | `v0.3.0` | First non-Brave enable: Google Chrome `.deb` — **minor** |
 | `v0.4.0` | Opera `.deb` + Opera Flatpak (packaging-variant pilot) + Shell 14 WM-class disambiguation — **minor** |
 | `v0.5.0` | Vivaldi `.deb` (staged MV3 forced `browserId`; Flatpak/Snap Out) + NM reconnect-on-daemon-death — **minor** |
+| `v0.6.0` | Chromium Snap (absolute-path NM wrapper; home sock; staged forced `browserId`; Flatpak deferred) — **minor** |
 
-Version triad (current): PUBLISH `Current tag: v0.5.0` · MV3 `0.5.0` · CHANGELOG `## 0.5.0`. First public tag line stays `v0.2.9`.
+Version triad (current): PUBLISH `Current tag: v0.6.0` · MV3 `0.6.0` · CHANGELOG `## 0.6.0`. First public tag line stays `v0.2.9`.
 
 Never copy another alkitect repo’s tag. Use `RC-BEFORE-1.0` in this file only for an intentional 0.9.x RC.
 
 ```bash
 ./scripts/ci-check.sh
-git tag -a v0.5.0 -m "v0.5.0"
+git tag -a v0.6.0 -m "v0.6.0"
 git push origin main
-git push origin v0.5.0
+git push origin v0.6.0
 ```
 
 Repo URL: `https://github.com/alkitect/browser-aero-peek`
@@ -63,7 +64,7 @@ Priority order:
 3. Opera `.deb` — **supported** (`v0.4.0`)
 4. Opera Flatpak (`opera-flatpak`) — **supported** (`v0.4.0`; packaging pilot)
 5. Vivaldi — **supported** (`v0.5.0`; Flatpak/Snap Out)
-6. Chromium
+6. Chromium Snap — **supported** (`v0.6.0`; Flatpak deferred)
 7. Microsoft Edge
 8. Mozilla Firefox
 9. Tor Browser (feasibility gate)
@@ -71,22 +72,22 @@ Priority order:
 
 ## Human gate
 
-Published through **v0.5.0** (Brave + Chrome + Opera deb + Opera Flatpak + Vivaldi `.deb`). Optional soak: logout/in + `./scripts/verify-e2e.sh` scrub/corridor/header checklist (does not block the tag).
+Published through **v0.6.0** (Brave + Chrome + Opera deb + Opera Flatpak + Vivaldi `.deb` + Chromium Snap). Optional soak: logout/in + `./scripts/verify-e2e.sh` scrub/corridor/header checklist (does not block the tag).
 
 ## GitHub About
 
 | Field | Value |
 |-------|--------|
-| Description | Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera + Vivaldi supported |
+| Description | Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera + Vivaldi + Chromium Snap supported |
 | Website | _(empty — tip via README Ko-fi badge)_ |
-| Topics | `linux`, `ubuntu`, `gnome`, `wayland`, `brave`, `chrome`, `opera`, `vivaldi`, `gnome-shell-extension`, `dock` |
+| Topics | `linux`, `ubuntu`, `gnome`, `wayland`, `brave`, `chrome`, `opera`, `vivaldi`, `chromium`, `gnome-shell-extension`, `dock` |
 
 ```bash
 gh repo edit alkitect/browser-aero-peek \
-  --description "Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave supported at cutover" \
+  --description "Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera + Vivaldi + Chromium Snap supported" \
   --homepage "" \
   --add-topic linux --add-topic ubuntu --add-topic gnome \
-  --add-topic wayland --add-topic brave --add-topic gnome-shell-extension \
+  --add-topic wayland --add-topic brave --add-topic chromium --add-topic gnome-shell-extension \
   --add-topic dock
 ```
 

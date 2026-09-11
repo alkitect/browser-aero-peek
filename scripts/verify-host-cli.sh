@@ -21,6 +21,15 @@ fi
   exit 1
 }
 
+# Headless CI / SSH: GLib will not autolaunch a session bus without $DISPLAY.
+if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
+  if command -v dbus-run-session >/dev/null 2>&1; then
+    exec dbus-run-session -- "$0" "$@"
+  fi
+  echo "verify-host-cli: need a session D-Bus (dbus-run-session / graphical login)" >&2
+  exit 1
+fi
+
 # Test registry: five enabled chromium peers for multiplex soak.
 TMP_REG="$(mktemp)"
 export ALKITECT_BROWSERS_JSON="${TMP_REG}"
@@ -29,7 +38,7 @@ import json
 from pathlib import Path
 src = json.loads(Path("${ROOT}/config/browsers.json").read_text())
 for e in src["browsers"]:
-    e["enabled"] = e["id"] in ("brave", "chrome", "opera", "opera-flatpak", "vivaldi")
+    e["enabled"] = e["id"] in ("brave", "chrome", "opera", "opera-flatpak", "vivaldi", "chromium")
 Path("${TMP_REG}").write_text(json.dumps(src, indent=2) + "\n")
 PY
 
@@ -115,9 +124,11 @@ start_fake_peer opera-flatpak 1000 2000 3000
 FAKE_OPERA_FP=$!
 start_fake_peer vivaldi 10000 20000 30000
 FAKE_VIVALDI=$!
+start_fake_peer chromium 100000 200000 300000
+FAKE_CHROMIUM=$!
 
 cleanup_all() {
-  kill "${FAKE_BRAVE}" "${FAKE_CHROME}" "${FAKE_OPERA}" "${FAKE_OPERA_FP}" "${FAKE_VIVALDI}" 2>/dev/null || true
+  kill "${FAKE_BRAVE}" "${FAKE_CHROME}" "${FAKE_OPERA}" "${FAKE_OPERA_FP}" "${FAKE_VIVALDI}" "${FAKE_CHROMIUM}" 2>/dev/null || true
   kill "${DAEMON_PID}" 2>/dev/null || true
   rm -f "${TMP_REG}"
   if [[ "${STOPPED_UNIT}" -eq 1 ]]; then
@@ -130,7 +141,7 @@ sleep 0.5
 echo "=== status ==="
 STATUS="$(browser-tabs-host cli status)"
 echo "${STATUS}"
-echo "${STATUS}" | python3 -c 'import json,sys; d=json.load(sys.stdin); p=set(d.get("peers",[])); assert p>={"brave","chrome","opera","opera-flatpak","vivaldi"}, d'
+echo "${STATUS}" | python3 -c 'import json,sys; d=json.load(sys.stdin); p=set(d.get("peers",[])); assert p>={"brave","chrome","opera","opera-flatpak","vivaldi","chromium"}, d'
 
 echo "=== list brave ==="
 OUT="$(browser-tabs-host cli list --browser brave)"
@@ -166,6 +177,11 @@ OUT_V="$(browser-tabs-host cli list --browser vivaldi)"
 echo "${OUT_V}"
 echo "${OUT_V}" | python3 -c 'import json,sys; t=json.load(sys.stdin); assert t[0]["title"]=="vivaldi-A", t'
 
+echo "=== list chromium ==="
+OUT_CR="$(browser-tabs-host cli list --browser chromium)"
+echo "${OUT_CR}"
+echo "${OUT_CR}" | python3 -c 'import json,sys; t=json.load(sys.stdin); assert t[0]["title"]=="chromium-A", t'
+
 echo "=== activate brave 2 ==="
 browser-tabs-host cli activate --browser brave 2
 
@@ -188,14 +204,15 @@ mod = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
 spec.loader.exec_module(mod)
 base = mod.thumb_cache_dir()
-for bid in ("brave", "chrome", "opera", "opera-flatpak", "vivaldi"):
+for bid in ("brave", "chrome", "opera", "opera-flatpak", "vivaldi", "chromium"):
     (base / bid).mkdir(parents=True, exist_ok=True)
     (base / bid / "tab-99.png").write_bytes(b"x")
 assert mod.prune_thumb_files("brave", {1, 2, 3}) >= 1
 assert (base / "chrome" / "tab-99.png").is_file()
 assert (base / "opera-flatpak" / "tab-99.png").is_file()
 assert (base / "vivaldi" / "tab-99.png").is_file()
-for bid in ("chrome", "opera", "opera-flatpak", "vivaldi"):
+assert (base / "chromium" / "tab-99.png").is_file()
+for bid in ("chrome", "opera", "opera-flatpak", "vivaldi", "chromium"):
     (base / bid / "tab-99.png").unlink()
 print("thumb prune scoped OK")
 PY

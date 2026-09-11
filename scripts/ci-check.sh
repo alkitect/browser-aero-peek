@@ -84,18 +84,18 @@ grep -qF 'EXT_ID_PLACEHOLDER' "${tmpl}" \
 # Version triad: First public tag stays v0.2.9; current release must match MV3 + CHANGELOG
 grep -qF 'First public tag: v0.2.9' docs/PUBLISH.md \
   || { echo "ci-check: docs/PUBLISH.md must record First public tag: v0.2.9" >&2; exit 1; }
-grep -qF 'Current tag: v0.5.0' docs/PUBLISH.md \
-  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.5.0" >&2; exit 1; }
+grep -qF 'Current tag: v0.6.0' docs/PUBLISH.md \
+  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.6.0" >&2; exit 1; }
 python3 - <<'PY'
 import json, sys
 from pathlib import Path
 v = json.loads(Path("browser-extension/manifest.json").read_text())["version"]
-if v != "0.5.0":
-    print(f"ci-check: MV3 version {v!r} != 0.5.0", file=sys.stderr)
+if v != "0.6.0":
+    print(f"ci-check: MV3 version {v!r} != 0.6.0", file=sys.stderr)
     sys.exit(1)
 PY
-grep -qE '^## 0\.4\.0' CHANGELOG.md \
-  || { echo "ci-check: CHANGELOG missing ## 0.5.0" >&2; exit 1; }
+grep -qE '^## 0\.6\.0' CHANGELOG.md \
+  || { echo "ci-check: CHANGELOG missing ## 0.6.0" >&2; exit 1; }
 
 # Absolute home paths (any username) must not appear in shipped sources.
 # Encoded so this script does not embed a concrete account name.
@@ -178,10 +178,18 @@ for e in browsers:
     if schema == "mozilla" and nm_path.rstrip("/").endswith("NativeMessagingHosts"):
         print(f"ci-check: mozilla entry {bid} must not use Chromium NativeMessagingHosts path", file=sys.stderr)
         sys.exit(1)
+    if bid == "chromium":
+        blob = (nm_path + " " + " ".join(e.get("nm_path_aliases") or [])).lower()
+        if "google-chrome" in blob or "google/chrome" in blob:
+            print("ci-check: chromium registry must not use Google Chrome NM paths", file=sys.stderr)
+            sys.exit(1)
+        if e.get("packaging") != "snap":
+            print("ci-check: chromium packaging must be snap for this wave", file=sys.stderr)
+            sys.exit(1)
     if e.get("enabled"):
         enabled.append(bid)
-if enabled != ["brave", "chrome", "opera", "opera-flatpak", "vivaldi"]:
-    print(f"ci-check: enabled browsers must be exactly ['brave', 'chrome', 'opera', 'opera-flatpak', 'vivaldi'], got {enabled!r}", file=sys.stderr)
+if enabled != ["brave", "chrome", "opera", "opera-flatpak", "vivaldi", "chromium"]:
+    print(f"ci-check: enabled browsers must be exactly ['brave', 'chrome', 'opera', 'opera-flatpak', 'vivaldi', 'chromium'], got {enabled!r}", file=sys.stderr)
     sys.exit(1)
 print("ci-check: browsers.json OK")
 PY
@@ -246,6 +254,17 @@ test -f "${tmp}/.local/share/alkitect-browser-tabs/mv3-opera-flatpak/manifest.js
 test -f "${tmp}/.local/share/alkitect-browser-tabs/mv3-vivaldi/forced-browser-id.js"
 test -f "${tmp}/.local/share/alkitect-browser-tabs/mv3-vivaldi/manifest.json"
 grep -q 'vivaldi' "${tmp}/.local/share/alkitect-browser-tabs/mv3-vivaldi/forced-browser-id.js"
+test -f "${tmp}/.local/share/alkitect-browser-tabs/mv3-chromium/forced-browser-id.js"
+grep -q 'chromium' "${tmp}/.local/share/alkitect-browser-tabs/mv3-chromium/forced-browser-id.js"
+test -x "${tmp}/bin/browser-tabs-nm-snap"
+grep -q 'ALKITECT_BROWSER_TABS_SOCK' "${tmp}/bin/browser-tabs-nm-snap"
+# Snap remaps \$HOME — wrapper must bake absolute host/sock paths (not \${HOME}/…).
+grep -Fq "ALKITECT_BROWSER_TABS_SOCK=\"${tmp}/alkitect-browser-tabs/browser-tabs.sock\"" "${tmp}/bin/browser-tabs-nm-snap"
+grep -Fq "exec \"${tmp}/bin/browser-tabs-host\"" "${tmp}/bin/browser-tabs-nm-snap"
+if grep -qE '\$\{HOME\}/(bin|alkitect)' "${tmp}/bin/browser-tabs-nm-snap"; then
+  echo "FAIL: browser-tabs-nm-snap still expands via Snap-remapped \$HOME" >&2
+  exit 1
+fi
 
 # Installed path must satisfy shell-fake greps
 ./scripts/verify-shell-fake.sh
@@ -295,6 +314,7 @@ test ! -e "${tmp}/.config/alkitect-browser-tabs/browsers.json"
 test ! -e "${tmp}/.local/share/gnome-shell/extensions/browser-tab-dock@alkitect"
 test ! -e "${tmp}/.local/share/alkitect-browser-tabs/mv3-opera-flatpak"
 test ! -e "${tmp}/.local/share/alkitect-browser-tabs/mv3-vivaldi"
+test ! -e "${tmp}/.local/share/alkitect-browser-tabs/mv3-chromium"
 python3 - <<'PY'
 import json, os, sys
 from pathlib import Path

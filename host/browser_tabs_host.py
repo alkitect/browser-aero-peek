@@ -19,19 +19,35 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
-import gi
-
-gi.require_version("Gio", "2.0")
-gi.require_version("GLib", "2.0")
-from gi.repository import Gio, GLib  # noqa: E402
+# Gio/GLib only needed for daemon + CLI (Snap Chromium NM cannot import gi).
+Gio = None  # type: ignore[assignment]
+GLib = None  # type: ignore[assignment]
 
 BUS_NAME = "org.alkitect.BrowserTabs1"
 OBJ_PATH = "/org/alkitect/BrowserTabs1"
 IFACE = "org.alkitect.BrowserTabs1"
 SOCK_NAME = "alkitect-browser-tabs.sock"
+HOME_SOCK_DIRNAME = "alkitect-browser-tabs"
+HOME_SOCK_NAME = "browser-tabs.sock"
 ALLOWED_NM_SCHEMAS = frozenset({"chromium", "mozilla"})
 
-INTROSPECT_XML = f"""
+INTROSPECT_XML = None  # filled after gi load for daemon
+
+
+def _ensure_gi() -> None:
+    """Import PyGObject for daemon/CLI only (native bridge is stdlib-only)."""
+    global Gio, GLib, INTROSPECT_XML
+    if Gio is not None and GLib is not None:
+        return
+    import gi
+
+    gi.require_version("Gio", "2.0")
+    gi.require_version("GLib", "2.0")
+    from gi.repository import Gio as _Gio, GLib as _GLib
+
+    Gio = _Gio
+    GLib = _GLib
+    INTROSPECT_XML = f"""
 <node>
   <interface name="{IFACE}">
     <method name="ListTabs">
@@ -53,6 +69,18 @@ INTROSPECT_XML = f"""
 def runtime_sock() -> Path:
     base = os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
     return Path(base) / SOCK_NAME
+
+
+def home_sock() -> Path:
+    """Snap-accessible sock (strict Chromium cannot use XDG_RUNTIME_DIR host socks)."""
+    return Path.home() / HOME_SOCK_DIRNAME / HOME_SOCK_NAME
+
+
+def native_connect_sock() -> Path:
+    override = os.environ.get("ALKITECT_BROWSER_TABS_SOCK")
+    if override:
+        return Path(override)
+    return runtime_sock()
 
 
 def thumb_cache_dir() -> Path:
@@ -191,12 +219,14 @@ def peer_uid_ok(connection: Gio.DBusConnection, sender: Optional[str]) -> bool:
 
 class Daemon:
     def __init__(self) -> None:
+        _ensure_gi()
         self._lock = threading.Lock()
         self._registry = load_registry()
         self._peers: dict[str, socket.socket] = {}
         self._loop = GLib.MainLoop()
         self._owner_id = 0
-        self._sock_srv: Optional[socket.socket] = None
+        self._sock_srvs: list[socket.socket] = []
+        self._sock_paths: list[Path] = []
         # Per-browser list cache / inflight
         self._list_inflight: dict[str, bool] = {}
         self._list_cache: dict[str, str] = {}
@@ -206,15 +236,18 @@ class Daemon:
         self._list_cache_ttl = 1.0
 
     def run(self) -> int:
-        path = runtime_sock()
-        if path.exists():
-            path.unlink()
-        self._sock_srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self._sock_srv.bind(str(path))
-        os.chmod(path, 0o600)
-        self._sock_srv.listen(8)
-        self._sock_srv.setblocking(False)
-        GLib.io_add_watch(self._sock_srv.fileno(), GLib.IO_IN, self._on_accept)
+        for path in (runtime_sock(), home_sock()):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if path.exists():
+                path.unlink()
+            srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            srv.bind(str(path))
+            os.chmod(path, 0o600)
+            srv.listen(8)
+            srv.setblocking(False)
+            GLib.io_add_watch(srv.fileno(), GLib.IO_IN, self._make_on_accept(srv))
+            self._sock_srvs.append(srv)
+            self._sock_paths.append(path)
 
         self._owner_id = Gio.bus_own_name(
             Gio.BusType.SESSION,
@@ -229,10 +262,14 @@ class Daemon:
         finally:
             if self._owner_id:
                 Gio.bus_unown_name(self._owner_id)
-            if self._sock_srv:
-                self._sock_srv.close()
-            if path.exists():
-                path.unlink(missing_ok=True)
+            for srv in self._sock_srvs:
+                try:
+                    srv.close()
+                except OSError:
+                    pass
+            for path in self._sock_paths:
+                if path.exists():
+                    path.unlink(missing_ok=True)
         return 0
 
     def _on_name_lost(self, *_args) -> None:
@@ -250,15 +287,17 @@ class Daemon:
             None,
         )
 
-    def _on_accept(self, _fd, _cond) -> bool:
-        assert self._sock_srv is not None
-        try:
-            conn, _ = self._sock_srv.accept()
-        except BlockingIOError:
+    def _make_on_accept(self, srv: socket.socket):
+        def _on_accept(_fd, _cond, s=srv) -> bool:
+            try:
+                conn, _ = s.accept()
+            except BlockingIOError:
+                return True
+            conn.setblocking(True)
+            threading.Thread(target=self._bind_peer, args=(conn,), daemon=True).start()
             return True
-        conn.setblocking(True)
-        threading.Thread(target=self._bind_peer, args=(conn,), daemon=True).start()
-        return True
+
+        return _on_accept
 
     def _recv_exact(self, conn: socket.socket, n: int) -> bytes:
         buf = b""
@@ -491,7 +530,7 @@ class Daemon:
 
 def run_native() -> int:
     """Browser-spawned bridge: stdio NM <-> Unix socket to daemon."""
-    path = runtime_sock()
+    path = native_connect_sock()
     if not path.exists():
         sys.stderr.write(f"browser-tabs-host: daemon socket missing: {path}\n")
         return 1
@@ -549,6 +588,7 @@ def run_native() -> int:
 
 
 def dbus_call(method: str, params: Optional[GLib.Variant] = None, timeout_ms: int = 5000) -> Any:
+    _ensure_gi()
     bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
     reply = bus.call_sync(
         BUS_NAME,
@@ -565,6 +605,7 @@ def dbus_call(method: str, params: Optional[GLib.Variant] = None, timeout_ms: in
 
 
 def run_cli(argv: list[str]) -> int:
+    _ensure_gi()
     p = argparse.ArgumentParser(prog="browser-tabs-cli")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("status")

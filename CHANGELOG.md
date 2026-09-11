@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.6.0
+
+- Enable Chromium (Snap): registry `chromium` with `packaging: snap`; Shell matcher (metadata 16); NM under snap profile + `~/bin` host bridge + home sock (strict snap AppArmor); staged MV3 forced `browserId`; Flatpak Chromium deferred.
+- Fix Snap NM wrapper: bake absolute host/sock paths (Snap remaps `$HOME` to `~/snap/chromium/<rev>/`, so `${HOME}/bin/browser-tabs-host` 404s).
+- Host: lazy-import gi so Snap-spawned native bridge is stdlib-only; daemon listens on `$XDG_RUNTIME_DIR` and `$HOME/alkitect-browser-tabs/browser-tabs.sock`.
 
 ## 0.5.0
 

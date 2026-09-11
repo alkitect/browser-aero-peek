@@ -60,12 +60,17 @@
     },
     {
       "id": "chromium",
-      "enabled": false,
+      "family": "chromium",
+      "packaging": "snap",
+      "enabled": true,
       "nm_schema": "chromium",
-      "nm_base": "xdg_config",
-      "nm_path": "chromium/NativeMessagingHosts",
-      "desktop_ids": ["chromium-browser.desktop", "chromium_chromium.desktop", "chromium.desktop"],
-      "wm_classes": ["chromium-browser", "Chromium-browser", "chromium"]
+      "nm_base": "home",
+      "nm_path": "snap/chromium/common/chromium/NativeMessagingHosts",
+      "nm_path_aliases": [
+        ".config/chromium/NativeMessagingHosts"
+      ],
+      "desktop_ids": ["chromium_chromium.desktop", "chromium-browser.desktop", "chromium.desktop"],
+      "wm_classes": ["chromium", "chromium-browser", "Chromium-browser"]
     },
     {
       "id": "edge",
