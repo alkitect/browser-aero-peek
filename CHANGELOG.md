@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.4.0
+
+- Enable Opera dual packaging: registry `opera` (`.deb`) + `opera-flatpak` (Flatpak `com.opera.Opera`); home-based NM + aliases; staged MV3 with forced `browserId`; Shell matcher Flatpak-before-native.
+- Opera Flatpak: NM via `browser-tabs-nm-flatpak` → `flatpak-spawn --host`; overrides for `~/.local/bin:ro`, staged MV3 share `:ro`, talk `org.freedesktop.Flatpak`; docs warn against ephemeral `/run/flatpak/doc/…` Load unpacked.
+- Shell 14: disambiguate shared `StartupWMClass=Opera` (Exec + NoExtension sibling retry); MV3 list budget + favicon fetch timeout so hung list cannot drop the NM peer.
+
 ## 0.3.0
 
 - Enable Google Chrome (`.deb`): registry `chrome.enabled`, Shell matcher, dual NM install/ci, BROWSER-SUPPORT / README In.

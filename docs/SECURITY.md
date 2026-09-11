@@ -13,7 +13,8 @@
 - `ListTabs` / `Activate` require a registry browser key. Activate with a tab id that was not listed for that browser → **ForeignTab** (fail-closed). This prevents cross-browser bleed when tab numeric ids collide.
 - Thumb/runtime paint paths are prefixed `{browserId}/tab-{tabId}` on host and Shell.
 - **If routing is wrong** (last-writer-wins, shared global tab cache, missing browser key), same-UID callers can see or activate the wrong browser’s tabs — treat concurrent-browser routing as a trust-plane control, not a convenience.
-- **Shared MV3 blast radius:** one pinned extension id / `allowed_origins` origin is reused across Chromium-family NM dirs when multiple browsers are enabled (Brave + Chrome today). Compromise of that origin affects every enabled Chromium NM lane. Do not widen origins; do not fork keys casually. Dual-NM: two profile dirs, one shared origin, host routes by `browserId` on the same-UID socket.
+- **Shared MV3 blast radius:** one pinned extension id / `allowed_origins` origin is reused across Chromium-family NM dirs when multiple browsers are enabled (Brave + Chrome + Opera `.deb` + Opera Flatpak today). Compromise of that origin affects every enabled Chromium NM lane. Do not widen origins; do not fork keys casually. Four-NM: four profile dirs (including Flatpak `.var/app/...` + alias), one shared origin, host routes by `browserId` on the same-UID socket.
+- **Flatpak Opera spawn boundary:** Flatpak cannot see the host Unix socket (`$XDG_RUNTIME_DIR/...sock`) and cannot import host PyGObject. NM JSON for `opera-flatpak` therefore points at `~/.local/bin/browser-tabs-nm-flatpak`, which runs `flatpak-spawn --host` → `browser-tabs-nm` on the real host. Install applies `filesystem=~/.local/bin:ro`, `filesystem=~/.local/share/alkitect-browser-tabs:ro` (durable Load unpacked path; avoid ephemeral `/run/flatpak/doc/…` portal grants), and `--talk-name=org.freedesktop.Flatpak`. Residual trust: same-UID Flatpak app with those overrides can spawn the host NM bridge; uninstall documents removing them.
 
 ## Favicon URLs / thumbnails
 
@@ -24,8 +25,9 @@ ListTabs carries inlined `data:` **favicon** PNGs and optional **thumb** PNGs (l
 ## Native messaging
 
 - Manifest `allowed_origins` = exactly one `chrome-extension://<id>/` per written NM JSON.
-- Install writes NM only for `enabled` registry rows; disabled `nm_path` dirs stay empty of this manifest.
+- Install writes NM only for `enabled` registry rows (`nm_base` `xdg_config` or `home`); disabled `nm_path` / alias dirs stay empty of this manifest.
 - Host binary under `~/.local/bin` mode `0755`; never world-writable install dirs.
+- Flatpak-staged MV3 may set `FORCED_BROWSER_ID` so hello binds as `opera-flatpak` (same extension id as native).
 - **Do not** publish `extension.pem` or `manifest-key.txt`. The MV3 manifest `key` field (and `extension-id.txt`) are **public** and pin the extension ID; they are not the private signing key.
 
 ## Hover abuse

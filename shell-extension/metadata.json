@@ -1,8 +1,8 @@
 {
   "name": "Browser Aero Peek",
-  "description": "Linux/Ubuntu Dock: browser tab thumbnail strip on hover (Brave supported at cutover). Stock click unchanged.",
+  "description": "Linux/Ubuntu Dock: browser tab thumbnail strip on hover (Brave, Chrome, Opera deb + Flatpak). Stock click unchanged.",
   "uuid": "browser-tab-dock@alkitect",
-  "version": 11,
+  "version": 14,
   "shell-version": [
     "42"
   ],

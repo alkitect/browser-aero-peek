@@ -4,6 +4,7 @@
       "id": "brave",
       "enabled": true,
       "nm_schema": "chromium",
+      "nm_base": "xdg_config",
       "nm_path": "BraveSoftware/Brave-Browser/NativeMessagingHosts",
       "desktop_ids": ["brave-browser.desktop", "brave-browser"],
       "wm_classes": ["brave-browser"]
@@ -12,22 +13,47 @@
       "id": "chrome",
       "enabled": true,
       "nm_schema": "chromium",
+      "nm_base": "xdg_config",
       "nm_path": "google-chrome/NativeMessagingHosts",
       "desktop_ids": ["google-chrome.desktop", "google-chrome"],
       "wm_classes": ["google-chrome", "Google-chrome"]
     },
     {
       "id": "opera",
-      "enabled": false,
+      "family": "opera",
+      "packaging": "deb",
+      "enabled": true,
       "nm_schema": "chromium",
+      "nm_base": "xdg_config",
       "nm_path": "opera/NativeMessagingHosts",
-      "desktop_ids": ["opera.desktop", "opera"],
-      "wm_classes": ["opera"]
+      "desktop_ids": ["opera.desktop", "opera", "opera-browser.desktop"],
+      "wm_classes": ["opera", "Opera"]
+    },
+    {
+      "id": "opera-flatpak",
+      "family": "opera",
+      "packaging": "flatpak",
+      "enabled": true,
+      "nm_schema": "chromium",
+      "nm_base": "home",
+      "nm_path": ".var/app/com.opera.Opera/config/opera/NativeMessagingHosts",
+      "nm_path_aliases": [
+        ".var/app/com.opera.Opera/config/google-chrome/NativeMessagingHosts"
+      ],
+      "desktop_ids": ["com.opera.Opera.desktop"],
+      "wm_classes": [],
+      "flatpak_id": "com.opera.Opera",
+      "flatpak_filesystem": [
+        "~/.local/bin:ro",
+        "~/.local/share/alkitect-browser-tabs:ro"
+      ],
+      "flatpak_talk_names": ["org.freedesktop.Flatpak"]
     },
     {
       "id": "vivaldi",
       "enabled": false,
       "nm_schema": "chromium",
+      "nm_base": "xdg_config",
       "nm_path": "vivaldi/NativeMessagingHosts",
       "desktop_ids": ["vivaldi-stable.desktop", "vivaldi-stable"],
       "wm_classes": ["vivaldi-stable", "Vivaldi-stable"]
@@ -36,6 +62,7 @@
       "id": "chromium",
       "enabled": false,
       "nm_schema": "chromium",
+      "nm_base": "xdg_config",
       "nm_path": "chromium/NativeMessagingHosts",
       "desktop_ids": ["chromium-browser.desktop", "chromium_chromium.desktop", "chromium.desktop"],
       "wm_classes": ["chromium-browser", "Chromium-browser", "chromium"]
@@ -44,6 +71,7 @@
       "id": "edge",
       "enabled": false,
       "nm_schema": "chromium",
+      "nm_base": "xdg_config",
       "nm_path": "microsoft-edge/NativeMessagingHosts",
       "desktop_ids": ["microsoft-edge.desktop", "microsoft-edge"],
       "wm_classes": ["microsoft-edge", "Microsoft-edge"]
@@ -52,6 +80,7 @@
       "id": "firefox",
       "enabled": false,
       "nm_schema": "mozilla",
+      "nm_base": "xdg_config",
       "nm_path": "mozilla/native-messaging-hosts",
       "desktop_ids": ["firefox.desktop", "firefox"],
       "wm_classes": ["firefox", "Firefox"]
@@ -60,6 +89,7 @@
       "id": "tor",
       "enabled": false,
       "nm_schema": "mozilla",
+      "nm_base": "xdg_config",
       "nm_path": "tor-browser/native-messaging-hosts",
       "desktop_ids": ["torbrowser.desktop", "tor-browser.desktop"],
       "wm_classes": ["Tor Browser", "Navigator"]

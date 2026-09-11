@@ -8,7 +8,7 @@ README variant: B
 
 **First public tag: v0.2.9**
 
-**Current tag: v0.3.0**
+**Current tag: v0.4.0**
 
 **V-001 count (organic, not invent / not copy):**
 
@@ -20,16 +20,17 @@ README variant: B
 | Why not greenfield `v0.1.0` | Same installable stack as Brave tip; cutover is rename + dual-lane docs + browser roadmap matrix (no new browser runtime feats) → **patch** after inherited `0.2.8` |
 | `v0.2.10` | Shared-prep (registry SSOT, multiplex bind hello, scoped D-Bus/CLI, multi-NM ci) — patch; Brave still only `enabled` browser |
 | `v0.3.0` | First non-Brave enable: Google Chrome `.deb` — **minor** |
+| `v0.4.0` | Opera `.deb` + Opera Flatpak (packaging-variant pilot) + Shell 14 WM-class disambiguation — **minor** |
 
-Version triad (current): PUBLISH `Current tag: v0.3.0` · MV3 `0.3.0` · CHANGELOG `## 0.3.0`. First public tag line stays `v0.2.9`.
+Version triad (current): PUBLISH `Current tag: v0.4.0` · MV3 `0.4.0` · CHANGELOG `## 0.4.0`. First public tag line stays `v0.2.9`.
 
 Never copy another alkitect repo’s tag. Use `RC-BEFORE-1.0` in this file only for an intentional 0.9.x RC.
 
 ```bash
 ./scripts/ci-check.sh
-git tag -a v0.3.0 -m "v0.3.0"
+git tag -a v0.4.0 -m "v0.4.0"
 git push origin main
-git push origin v0.3.0
+git push origin v0.4.0
 ```
 
 Repo URL: `https://github.com/alkitect/browser-aero-peek`
@@ -54,29 +55,30 @@ Repo URL: `https://github.com/alkitect/browser-aero-peek`
 
 ## Browser backlog (post-cutover)
 
-Priority order (cutover does **not** ship these install paths):
+Priority order:
 
 1. Brave — **supported**
-2. Google Chrome — **supported** (Wave Chromium first enable)
-3. Opera
-4. Vivaldi
-5. Chromium
-6. Microsoft Edge
-7. Mozilla Firefox
-8. Tor Browser (feasibility gate)
-9. GNOME Web — **Out**
+2. Google Chrome — **supported**
+3. Opera `.deb` — **supported** (`v0.4.0`)
+4. Opera Flatpak (`opera-flatpak`) — **supported** (`v0.4.0`; packaging pilot)
+5. Vivaldi
+6. Chromium
+7. Microsoft Edge
+8. Mozilla Firefox
+9. Tor Browser (feasibility gate)
+10. GNOME Web — **Out**
 
 ## Human gate
 
-Published through **v0.3.0** (Brave + Chrome). Optional soak: logout/in + `./scripts/verify-e2e.sh` scrub/corridor/header checklist (does not block the tag).
+Published through **v0.4.0** (Brave + Chrome + Opera deb + Opera Flatpak). Optional soak: logout/in + `./scripts/verify-e2e.sh` scrub/corridor/header checklist (does not block the tag).
 
 ## GitHub About
 
 | Field | Value |
 |-------|--------|
-| Description | Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome supported |
+| Description | Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera supported |
 | Website | _(empty — tip via README Ko-fi badge)_ |
-| Topics | `linux`, `ubuntu`, `gnome`, `wayland`, `brave`, `chrome`, `gnome-shell-extension`, `dock` |
+| Topics | `linux`, `ubuntu`, `gnome`, `wayland`, `brave`, `chrome`, `opera`, `gnome-shell-extension`, `dock` |
 
 ```bash
 gh repo edit alkitect/browser-aero-peek \

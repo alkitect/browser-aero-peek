@@ -10,6 +10,13 @@ const THUMB_H = 130; // must match shell-extension THUMB_H
 // PNG at frame size: UI/text stays sharp (JPEG blocks ruin interfaces).
 const THUMB_MAX_BYTES = 192 * 1024;
 
+// Optional: install stages forced-browser-id.js for Flatpak unpacked copies.
+try {
+  importScripts("forced-browser-id.js");
+} catch (_) {
+  /* shared native tree has no forced id */
+}
+
 let port = null;
 /** @type {Map<number, string>} tabId → data:image/png (frame-sized) */
 const thumbCache = new Map();
@@ -129,7 +136,14 @@ async function tryInlineUrl(url) {
     return toPngDataUrl(url);
   }
   try {
-    const r = await fetch(url);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 800);
+    let r;
+    try {
+      r = await fetch(url, { signal: ctrl.signal });
+    } finally {
+      clearTimeout(timer);
+    }
     if (!r.ok) {
       return "";
     }
@@ -298,6 +312,10 @@ function connect() {
 
 /** Registry id for NM bind; Brave-first UA heuristics (shared MV3 blast radius). */
 function detectBrowserId() {
+  // Optional install-staged file for Flatpak (or other) unpacked copies.
+  if (typeof FORCED_BROWSER_ID === "string" && FORCED_BROWSER_ID) {
+    return FORCED_BROWSER_ID;
+  }
   try {
     if (navigator.brave && typeof navigator.brave.isBrave === "function") {
       return "brave";
@@ -324,7 +342,6 @@ function detectBrowserId() {
   if (/Chrome\//.test(ua)) {
     return "chrome";
   }
-  // Fail closed to brave — only Brave is enabled in shared-prep registry.
   return "brave";
 }
 
@@ -363,7 +380,7 @@ function onHostMessage(msg) {
         if (active && win.state !== "minimized") {
           await captureThumb(win.id, active.id);
         }
-        const out = await Promise.all(
+        const build = Promise.all(
           list.map(async (t) => ({
             id: t.id,
             title: t.title || "",
@@ -371,6 +388,21 @@ function onHostMessage(msg) {
             thumb: (await loadThumb(t.id)) || "",
           }))
         );
+        // Stay under host ListTabs timeout (5s) — hung favicon/capture must not drop the peer.
+        let out;
+        try {
+          out = await Promise.race([
+            build,
+            new Promise((_, rej) => setTimeout(() => rej(new Error("list-budget")), 3500)),
+          ]);
+        } catch (_) {
+          out = list.map((t) => ({
+            id: t.id,
+            title: t.title || "",
+            favIconUrl: "",
+            thumb: thumbCache.get(t.id) || "",
+          }));
+        }
         reply({
           type: "list",
           tabs: out,

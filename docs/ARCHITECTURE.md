@@ -2,34 +2,34 @@
 
 ## Context
 
-On **Linux Ubuntu + GNOME Wayland**, show browser **tab titles, favicons, and cached thumbnails** when the user **hovers** a supported Ubuntu Dock icon (dwell), without changing global dock click-action. At shared-prep, only **Brave** is enabled; the host and Shell are multi-browser-ready via `config/browsers.json`.
+On **Linux Ubuntu + GNOME Wayland**, show browser **tab titles, favicons, and cached thumbnails** when the user **hovers** a supported Ubuntu Dock icon (dwell), without changing global dock click-action. Enabled peers today: Brave, Chrome, Opera `.deb`, Opera Flatpak — via `config/browsers.json`.
 
 ## Containers
 
 ```text
 ┌──────────────┐  NM + hello(browserId)  ┌──────────────────┐  D-Bus (browser key)  ┌─────────────────┐
-│ Brave MV3    │ ───────────────────────► │ browser-tabs-host│ ◄──────────────────── │ Shell extension │
-│ (enabled)    │   stdio via NM           │ daemon (systemd) │   ListTabs(s) /       │ hover-dwell     │
+│ Brave/Chrome │ ───────────────────────► │ browser-tabs-host│ ◄──────────────────── │ Shell extension │
+│ Opera deb MV3│   stdio via NM           │ daemon (systemd) │   ListTabs(s) /       │ hover-dwell     │
 │              │ ◄─────────────────────── │ + Unix socket    │   Activate(s,u)       │ table matcher   │
 └──────────────┘                          │ multiplex peers  │                       └─────────────────┘
 ┌──────────────┐                          └──────────────────┘
-│ Chrome MV3…  │  (disabled: no NM JSON)            ▲
-│ future peers │                                    │ CLI --browser
+│ Opera Flatpak│  (forced browserId)                 ▲
+│ staged MV3   │  + host ~/.local/bin:ro             │ CLI --browser
 └──────────────┘                          browser-tabs-host cli
 ```
 
 | Container | Tech | Responsibility |
 |-----------|------|----------------|
-| MV3 extension | Chromium-family `.deb` unpacked | `tabs.query` / `tabs.update`; `connectNative`; **hello** with `browserId` |
+| MV3 extension | Chromium-family `.deb` or Flatpak-staged unpack | `tabs.query` / `tabs.update`; `connectNative`; **hello** with `browserId` |
 | Host daemon | Python3 + Gio, systemd --user | Bus name; multiplex NM peers; registry bind; scoped ListTabs cache/rate-limit |
 | Shell extension | GNOME 42 | Hover dwell on matched dock icons; peek strip; raise `Meta.Window` after Activate |
-| Registry | `config/browsers.json` | SSOT for id / NM path / desktop+WM match / enabled |
+| Registry | `config/browsers.json` | SSOT for id / `nm_base`+path / packaging / desktop+WM match / enabled |
 | Ubuntu Dock | Stock | Click-action only (`minimize-or-previews`) — not modified by this product |
 
 ## Trust
 
 - Session bus + `$XDG_RUNTIME_DIR` socket = same-UID boundary.
-- NM `allowed_origins` single extension ID per written manifest; isolation seam = registry + per-browser NM dirs + per-browser host routing (not separate host processes). **Dual-NM (Brave + Chrome):** same MV3 id written into two NativeMessagingHosts dirs; ListTabs/Activate carry the browser key so same-UID socket traffic stays lane-scoped.
+- NM `allowed_origins` single extension ID per written manifest; isolation seam = registry + per-browser NM dirs + per-browser host routing (not separate host processes). **Multi-NM (Brave + Chrome + Opera deb + Opera Flatpak):** same MV3 id written into four NativeMessagingHosts dirs (Flatpak under `~/.var/app/...`); ListTabs/Activate carry the browser key so same-UID socket traffic stays lane-scoped. Flatpak NM JSON uses `browser-tabs-nm-flatpak` → `flatpak-spawn --host` (sandbox has no host sock / no `gi`); overrides also expose the staged MV3 share dir for durable Load unpacked.
 
 ## See also
 

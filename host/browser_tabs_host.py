@@ -94,8 +94,15 @@ def load_registry() -> dict[str, dict[str, Any]]:
             "enabled",
             "nm_schema",
             "nm_path",
+            "nm_base",
+            "nm_path_aliases",
             "desktop_ids",
             "wm_classes",
+            "family",
+            "packaging",
+            "flatpak_id",
+            "flatpak_filesystem",
+            "flatpak_talk_names",
         }
         if unknown:
             raise ValueError(f"browsers.json: unknown keys {sorted(unknown)}")

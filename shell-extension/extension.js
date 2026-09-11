@@ -65,6 +65,17 @@ const BROWSER_MATCHERS = [
         desktopIds: ['google-chrome.desktop', 'google-chrome'],
         wmClasses: ['google-chrome', 'Google-chrome'],
     },
+    // Flatpak before native Opera — desktop id is more specific; WM class overlaps.
+    {
+        id: 'opera-flatpak',
+        desktopIds: ['com.opera.Opera.desktop'],
+        wmClasses: [],
+    },
+    {
+        id: 'opera',
+        desktopIds: ['opera.desktop', 'opera', 'opera-browser.desktop'],
+        wmClasses: ['opera', 'Opera'],
+    },
 ];
 
 let _proxy = null;
@@ -207,6 +218,24 @@ function _thumbActorFromDataUrl(dataUrl, browserId, tabId) {
     }
 }
 
+/** Opera .deb and Flatpak both ship StartupWMClass=Opera — disambiguate by desktop id / Exec. */
+function _matchOperaFamily(app, id, wm) {
+    if (id === 'com.opera.opera.desktop')
+        return 'opera-flatpak';
+    if (id === 'opera.desktop' || id === 'opera' || id === 'opera-browser.desktop')
+        return 'opera';
+    let exec = '';
+    try {
+        const info = app.get_app_info();
+        exec = ((info && info.get_executable()) || '').toLowerCase();
+    } catch (_e) { /* ignore */ }
+    if (exec.includes('flatpak') || id.startsWith('com.opera.'))
+        return 'opera-flatpak';
+    if (wm === 'opera')
+        return 'opera';
+    return null;
+}
+
 /** Match dock app → registry browser id (or null). */
 function _matchBrowserApp(app) {
     if (!app)
@@ -219,7 +248,15 @@ function _matchBrowserApp(app) {
         if (raw)
             wm = String(raw).toLowerCase();
     } catch (_e) { /* ignore */ }
+    // Opera family first: shared WM class must not steal Flatpak ↔ deb.
+    if (id.includes('opera') || wm === 'opera') {
+        const operaId = _matchOperaFamily(app, id, wm);
+        if (operaId)
+            return operaId;
+    }
     for (const m of BROWSER_MATCHERS) {
+        if (m.id === 'opera' || m.id === 'opera-flatpak')
+            continue;
         for (const d of m.desktopIds) {
             if (id === d.toLowerCase())
                 return m.id;
@@ -229,6 +266,15 @@ function _matchBrowserApp(app) {
                 return m.id;
         }
     }
+    return null;
+}
+
+/** Sibling registry id when GNOME merges Opera deb+Flatpak under one StartupWMClass. */
+function _operaPeerFallback(browserId) {
+    if (browserId === 'opera')
+        return 'opera-flatpak';
+    if (browserId === 'opera-flatpak')
+        return 'opera';
     return null;
 }
 
@@ -656,7 +702,7 @@ class Extension {
         this._startListTabs(icon, browserId);
     }
 
-    _startListTabs(icon, browserId) {
+    _startListTabs(icon, browserId, retried) {
         this._listInFlight.set(browserId, true);
         let proxy;
         try {
@@ -683,8 +729,14 @@ class Extension {
                 if (this._pendingShowIcon === icon && icon.hover)
                     this._showPeekStrip(tabs, icon, browserId);
             } catch (e) {
-                this._clearPendingShow();
                 const msg = String(e);
+                const alt = !retried ? _operaPeerFallback(browserId) : null;
+                if (alt && msg.indexOf('NoExtension') !== -1 && !this._listInFlight.get(alt)) {
+                    log(`${Me.metadata.uuid}: ListTabs ${browserId} NoExtension — retry ${alt}`);
+                    this._startListTabs(icon, alt, true);
+                    return;
+                }
+                this._clearPendingShow();
                 log(`${Me.metadata.uuid}: ListTabs failed: ${msg}`);
                 if (!this._warnedNoExt && msg.indexOf('NoExtension') !== -1) {
                     this._warnedNoExt = true;

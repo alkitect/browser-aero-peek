@@ -15,16 +15,16 @@ Thumbnails are screenshots from the last time that tab was visible — Chromium 
 
 Dock **click** stays stock minimize-or-previews. Peek is hover-only.
 
-**At this release, Brave and Google Chrome `.deb` are supported.** Other browsers stay on the roadmap — Flatpak/Snap stay Out.
+**At this release, Brave, Google Chrome, Opera `.deb`, and Opera Flatpak are supported.** Other browsers stay on the roadmap — other Flatpak/Snap products stay Out.
 
 ## Who this is for
 
 See **[docs/BROWSER-SUPPORT.md](docs/BROWSER-SUPPORT.md)** for the full In / Planned / Out matrix and enabled/disabled NM semantics.
 
-- **In:** Ubuntu 22.04 + GNOME Shell 42 **Wayland**, Ubuntu Dock, and the **Brave `.deb`** or **Google Chrome `.deb`** (native only)
+- **In:** Ubuntu 22.04 + GNOME Shell 42 **Wayland**, Ubuntu Dock, and **Brave**, **Google Chrome**, **Opera** `.deb`, and/or **Opera Flatpak** (`com.opera.Opera`)
 - **In:** You keep several tabs open and want to pick one from the dock without guessing
-- **Planned (not enabled yet):** Opera → Vivaldi → Chromium → Edge; then Firefox; then Tor Browser (feasibility gate)
-- **Out:** GNOME Web (Epiphany); Flatpak or Snap browsers; non-GNOME desktops; replacing the global dock click-action
+- **Planned (not enabled yet):** Vivaldi → Chromium → Edge; then Firefox; then Tor Browser (feasibility gate)
+- **Out:** GNOME Web (Epiphany); Snap browsers; other Flatpak browsers; Opera GX unless matched later; non-GNOME desktops; replacing the global dock click-action
 
 ## Quick start
 
@@ -35,22 +35,26 @@ chmod +x scripts/*.sh
 ./scripts/install-to-local.sh --enable-automation
 ```
 
-**What you installed:** three pieces — a user daemon (`alkitect-browser-tabs.service`), native-messaging hooks for **each enabled** browser (Brave + Chrome), and Shell extension `browser-tab-dock@alkitect`. The host starts with your graphical session. You still load the add-on in each browser and enable the Shell extension yourself. `--enable-automation` enables the **systemd user** unit only (not sudoers / system-wide).
+**What you installed:** three pieces — a user daemon (`alkitect-browser-tabs.service`), native-messaging hooks for **each enabled** browser (Brave + Chrome + Opera deb + Opera Flatpak), and Shell extension `browser-tab-dock@alkitect`. The host starts with your graphical session. You still load the add-on in each browser and enable the Shell extension yourself. `--enable-automation` enables the **systemd user** unit only (not sudoers / system-wide).
 
 **1. Brave** — open `brave://extensions` → Developer mode → Load unpacked → `browser-extension/`. Confirm the ID matches `browser-extension/extension-id.txt`. Fully quit and relaunch Brave, then run `browser-tabs-host cli list --browser brave`.
 
 **1b. Chrome** — open `chrome://extensions` → Developer mode → Load unpacked → same `browser-extension/` folder (same ID). Fully quit and relaunch Chrome, then `browser-tabs-host cli list --browser chrome`.
 
-**2. Shell** — Wayland needs a logout after enable (and after Shell metadata name/url changes):
+**1c. Opera (`.deb`)** — open `opera://extensions` → Developer mode → Load unpacked → same `browser-extension/` folder. Fully quit and relaunch Opera, then `browser-tabs-host cli list --browser opera`.
+
+**1d. Opera (Flatpak)** — open `opera://extensions` in Flatpak Opera → **Remove** any copy still pointing at `/run/flatpak/doc/…` → Load unpacked → `~/.local/share/alkitect-browser-tabs/mv3-opera-flatpak/` (must be that path, not a portal temp). Quit/relaunch Flatpak Opera, then `browser-tabs-host cli list --browser opera-flatpak`.
+
+**2. Shell** — Wayland needs a logout after enable (and after Shell metadata / matcher changes):
 
 ```bash
 gnome-extensions enable browser-tab-dock@alkitect
 # log out and back in
 ```
 
-**3. Try it** — open one Brave **or** Chrome window with at least two tabs. Hover that browser’s dock icon briefly; click a card to activate that tab. Clicking the icon itself still minimize-or-previews.
+**3. Try it** — open one Brave, Chrome, or Opera (deb or Flatpak) window with at least two tabs. Hover that browser’s dock icon briefly; click a card to activate that tab. Clicking the icon itself still minimize-or-previews.
 
-**Needs:** Ubuntu GNOME Wayland, Brave and/or Chrome `.deb`, `systemd --user`, and a session where you can enable GNOME Shell extensions.
+**Needs:** Ubuntu GNOME Wayland, Brave and/or Chrome and/or Opera `.deb` and/or Opera Flatpak, `systemd --user`, and a session where you can enable GNOME Shell extensions.
 
 ## Check it works
 
@@ -104,7 +108,7 @@ Versions: MV3 `browser-extension/manifest.json` (git tags track this) · Shell `
 
 ## Limits & safety
 
-- **Linux + Ubuntu Dock + Brave/Chrome `.deb` only at this tag** — other OSes, docks, and browsers are unsupported until their roadmap wave ships.
+- **Linux + Ubuntu Dock + Brave/Chrome/Opera (`.deb` + Flatpak) at this tag** — other OSes, docks, and browsers are unsupported until their roadmap wave ships.
 - **One window per browser** with ≥2 tabs for peek; several windows of the same browser → no tab strip (stock window previews still work).
 - **Thumbnails are page screenshots** (more sensitive than titles). Same-UID processes on D-Bus or the host socket can read them — details in [SECURITY.md](docs/SECURITY.md).
 - Hover dwell and host rate limits reduce spam while scrubbing past the icon.

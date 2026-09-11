@@ -8,6 +8,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN="${HOME}/.local/bin"
 SYSTEMD_USER="${XDG_CONFIG_HOME:-${HOME}/.config}/systemd/user"
 CFG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/alkitect-browser-tabs"
+SHARE_DIR="${XDG_DATA_HOME:-${HOME}/.local/share}/alkitect-browser-tabs"
 EXT_ID_FILE="${ROOT}/browser-extension/extension-id.txt"
 BROWSERS_JSON="${ROOT}/config/browsers.json"
 ENABLE_AUTOMATION=0
@@ -36,7 +37,7 @@ if [[ ! -f "${BROWSERS_JSON}" ]]; then
 fi
 EXT_ID="$(tr -d '[:space:]' <"${EXT_ID_FILE}")"
 
-mkdir -p "${BIN}" "${SYSTEMD_USER}" "${CFG_DIR}"
+mkdir -p "${BIN}" "${SYSTEMD_USER}" "${CFG_DIR}" "${SHARE_DIR}"
 
 # Fail if install targets are group/world-writable
 for d in "${BIN}" "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"; do
@@ -58,6 +59,20 @@ exec "${BIN}/browser-tabs-host" native "\$@"
 EOF
 chmod 0755 "${BIN}/browser-tabs-nm"
 
+# Flatpak sandbox: no host Unix socket + no system gi — re-exec NM on the host.
+cat >"${BIN}/browser-tabs-nm-flatpak" <<EOF
+#!/usr/bin/env bash
+exec flatpak-spawn --host "${BIN}/browser-tabs-nm" "\$@"
+EOF
+chmod 0755 "${BIN}/browser-tabs-nm-flatpak"
+
+# Stage Flatpak-oriented MV3 copy with forced browser id (same extension-id / key).
+FLATPAK_EXT="${SHARE_DIR}/mv3-opera-flatpak"
+rm -rf "${FLATPAK_EXT}"
+mkdir -p "${FLATPAK_EXT}"
+cp -a "${ROOT}/browser-extension/." "${FLATPAK_EXT}/"
+printf '%s\n' 'var FORCED_BROWSER_ID = "opera-flatpak";' >"${FLATPAK_EXT}/forced-browser-id.js"
+
 # NM manifests: only enabled chromium-schema browsers (mozilla reserved for later waves).
 python3 - <<PY
 import json
@@ -68,11 +83,55 @@ from pathlib import Path
 root = Path("${ROOT}")
 ext_id = "${EXT_ID}"
 bin_nm = str(Path("${BIN}/browser-tabs-nm").resolve())
-cfg_home = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config"))
+bin_nm_flatpak = str(Path("${BIN}/browser-tabs-nm-flatpak").resolve())
+home = Path.home()
+cfg_home = Path(os.environ.get("XDG_CONFIG_HOME") or (home / ".config"))
 data = json.loads(Path("${BROWSERS_JSON}").read_text())
 tmpl = json.loads((root / "native-messaging/org.alkitect.browser_tabs.json.template").read_text())
+ALLOWED_KEYS = {
+    "id", "enabled", "nm_schema", "nm_path", "nm_base", "nm_path_aliases",
+    "desktop_ids", "wm_classes", "family", "packaging", "flatpak_id", "flatpak_filesystem",
+    "flatpak_talk_names",
+}
 wrote = 0
+
+def resolve_nm_dir(entry, rel: str) -> Path:
+    base = entry.get("nm_base") or "xdg_config"
+    if base == "xdg_config":
+        return cfg_home / rel
+    if base == "home":
+        return home / rel
+    raise ValueError(f"bad nm_base {base!r}")
+
+def harden_dir(nm_dir: Path) -> None:
+    nm_dir.mkdir(parents=True, exist_ok=True)
+    mode = nm_dir.stat().st_mode
+    if mode & 0o022:
+        try:
+            nm_dir.chmod(0o755)
+        except OSError as e:
+            print(f"Refusing install: {nm_dir} is group/world-writable and chmod failed ({e})", file=sys.stderr)
+            sys.exit(1)
+        if nm_dir.stat().st_mode & 0o022:
+            print(f"Refusing install: {nm_dir} is still group/world-writable after chmod", file=sys.stderr)
+            sys.exit(1)
+
+def write_nm(nm_dir: Path, path: str) -> None:
+    harden_dir(nm_dir)
+    out = dict(tmpl)
+    out["path"] = path
+    out["allowed_origins"] = [f"chrome-extension://{ext_id}/"]
+    dest = nm_dir / "org.alkitect.browser_tabs.json"
+    dest.write_text(json.dumps(out, indent=2) + "\n")
+    print(f"Wrote {dest}")
+    print("path:", out["path"])
+    print("allowed_origins:", out["allowed_origins"])
+
 for entry in data["browsers"]:
+    unknown = set(entry) - ALLOWED_KEYS
+    if unknown:
+        print(f"install: unknown keys {sorted(unknown)}", file=sys.stderr)
+        sys.exit(1)
     bid = entry["id"]
     schema = entry.get("nm_schema")
     enabled = bool(entry.get("enabled"))
@@ -80,37 +139,50 @@ for entry in data["browsers"]:
     if nm_path.startswith("/") or nm_path.startswith("~") or ".." in Path(nm_path).parts:
         print(f"install: bad nm_path for {bid}", file=sys.stderr)
         sys.exit(1)
+    for alias in entry.get("nm_path_aliases") or []:
+        if alias.startswith("/") or alias.startswith("~") or ".." in Path(alias).parts:
+            print(f"install: bad nm_path_aliases for {bid}", file=sys.stderr)
+            sys.exit(1)
     if not enabled:
         continue
     if schema != "chromium":
         print(f"install: skip enabled non-chromium {bid} (schema={schema})", file=sys.stderr)
         continue
-    nm_dir = cfg_home / nm_path
-    nm_dir.mkdir(parents=True, exist_ok=True)
-    mode = nm_dir.stat().st_mode
-    if mode & 0o022:
-        # Chromium profile dirs are often group-writable; drop write bits when we own the path.
-        try:
-            nm_dir.chmod(0o755)
-        except OSError as e:
-            print(f"Refusing install: {nm_dir} is group/world-writable and chmod failed ({e})", file=sys.stderr)
-            sys.exit(1)
-        mode = nm_dir.stat().st_mode
-        if mode & 0o022:
-            print(f"Refusing install: {nm_dir} is still group/world-writable after chmod", file=sys.stderr)
-            sys.exit(1)
-    out = dict(tmpl)
-    out["path"] = bin_nm
-    out["allowed_origins"] = [f"chrome-extension://{ext_id}/"]
-    dest = nm_dir / "org.alkitect.browser_tabs.json"
-    dest.write_text(json.dumps(out, indent=2) + "\n")
-    print(f"Wrote {dest}")
-    print("allowed_origins:", out["allowed_origins"])
+    nm_bin = bin_nm_flatpak if entry.get("packaging") == "flatpak" else bin_nm
+    write_nm(resolve_nm_dir(entry, nm_path), nm_bin)
+    for alias in entry.get("nm_path_aliases") or []:
+        write_nm(resolve_nm_dir(entry, alias), nm_bin)
     wrote += 1
+
 if wrote < 1:
     print("install: no enabled chromium browsers in registry", file=sys.stderr)
     sys.exit(1)
 PY
+
+# Flatpak: host NM re-exec (talk-name) + staged MV3 path (documented in SECURITY.md).
+if command -v flatpak >/dev/null 2>&1; then
+  python3 - <<PY
+import json, subprocess
+from pathlib import Path
+data = json.loads(Path("${BROWSERS_JSON}").read_text())
+for entry in data["browsers"]:
+    if not entry.get("enabled") or entry.get("packaging") != "flatpak":
+        continue
+    fid = entry.get("flatpak_id")
+    if not fid:
+        continue
+    probe = subprocess.run(["flatpak", "info", fid], capture_output=True)
+    if probe.returncode != 0:
+        print(f"install: flatpak {fid} not installed — NM written; skip override")
+        continue
+    for fs in entry.get("flatpak_filesystem") or []:
+        subprocess.run(["flatpak", "override", "--user", f"--filesystem={fs}", fid], check=False)
+        print(f"flatpak override --user --filesystem={fs} {fid}")
+    for name in entry.get("flatpak_talk_names") or []:
+        subprocess.run(["flatpak", "override", "--user", f"--talk-name={name}", fid], check=False)
+        print(f"flatpak override --user --talk-name={name} {fid}")
+PY
+fi
 
 install -m0644 \
   "${ROOT}/systemd/user/alkitect-browser-tabs.service.example" \
@@ -137,17 +209,18 @@ elif [[ -n "${ALKITECT_CI_TMP:-}" ]]; then
 fi
 
 echo
-echo "Next (enabled browsers — Brave + Chrome):"
-echo "  Brave: brave://extensions → Load unpacked → ${ROOT}/browser-extension"
-echo "  Chrome: chrome://extensions → Load unpacked → same folder (same extension ID ${EXT_ID})"
+echo "Next (enabled browsers — Brave + Chrome + Opera deb + Opera Flatpak):"
+echo "  Brave:  brave://extensions  → Load unpacked → ${ROOT}/browser-extension"
+echo "  Chrome: chrome://extensions → Load unpacked → ${ROOT}/browser-extension"
+echo "  Opera (.deb): opera://extensions → Load unpacked → ${ROOT}/browser-extension"
+echo "  Opera (Flatpak): opera://extensions → Remove portal loads → Load unpacked → ${FLATPAK_EXT}"
+echo "       (forced hello browserId=opera-flatpak; NM via flatpak-spawn --host; same extension ID ${EXT_ID})"
 echo "  Confirm ID is ${EXT_ID}; fully quit and relaunch each browser"
 echo "  browser-tabs-host cli status"
-echo "  browser-tabs-host cli list --browser brave"
-echo "  browser-tabs-host cli list --browser chrome"
+echo "  browser-tabs-host cli list --browser brave|chrome|opera|opera-flatpak"
 echo
 echo "Next (Shell hover peek — Wayland needs logout/in):"
 echo "  gnome-extensions enable ${EXT_UUID}"
 echo "  then log out and back in"
-echo "  Hover Brave or Chrome dock icon (1 window, ≥2 tabs) → tab list"
-echo "  Click icon → still minimize-or-previews (unchanged)"
+echo "  Hover Brave / Chrome / Opera (.deb or Flatpak) dock icon (1 window, ≥2 tabs)"
 echo "  ./scripts/verify-e2e.sh   # human checklist"

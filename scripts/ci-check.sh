@@ -84,18 +84,18 @@ grep -qF 'EXT_ID_PLACEHOLDER' "${tmpl}" \
 # Version triad: First public tag stays v0.2.9; current release must match MV3 + CHANGELOG
 grep -qF 'First public tag: v0.2.9' docs/PUBLISH.md \
   || { echo "ci-check: docs/PUBLISH.md must record First public tag: v0.2.9" >&2; exit 1; }
-grep -qF 'Current tag: v0.3.0' docs/PUBLISH.md \
-  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.3.0" >&2; exit 1; }
+grep -qF 'Current tag: v0.4.0' docs/PUBLISH.md \
+  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.4.0" >&2; exit 1; }
 python3 - <<'PY'
 import json, sys
 from pathlib import Path
 v = json.loads(Path("browser-extension/manifest.json").read_text())["version"]
-if v != "0.3.0":
-    print(f"ci-check: MV3 version {v!r} != 0.3.0", file=sys.stderr)
+if v != "0.4.0":
+    print(f"ci-check: MV3 version {v!r} != 0.4.0", file=sys.stderr)
     sys.exit(1)
 PY
-grep -qE '^## 0\.3\.0' CHANGELOG.md \
-  || { echo "ci-check: CHANGELOG missing ## 0.3.0" >&2; exit 1; }
+grep -qE '^## 0\.4\.0' CHANGELOG.md \
+  || { echo "ci-check: CHANGELOG missing ## 0.4.0" >&2; exit 1; }
 
 # Absolute home paths (any username) must not appear in shipped sources.
 # Encoded so this script does not embed a concrete account name.
@@ -133,12 +133,16 @@ fi
 [[ -f config/browsers.json ]] || { echo "ci-check: missing config/browsers.json" >&2; exit 1; }
 [[ -f docs/BROWSER-SUPPORT.md ]] || { echo "ci-check: missing docs/BROWSER-SUPPORT.md" >&2; exit 1; }
 
-# Registry SSOT: schema, relative nm_path, Brave+Chrome enabled, unknown-key fail in host loader.
+# Registry SSOT: schema, relative nm_path, Brave+Chrome+Opera deb+Flatpak enabled
 python3 - <<'PY'
 import json, sys
 from pathlib import Path
 ALLOWED = {"chromium", "mozilla"}
-ALLOWED_KEYS = {"id", "enabled", "nm_schema", "nm_path", "desktop_ids", "wm_classes"}
+ALLOWED_KEYS = {
+    "id", "enabled", "nm_schema", "nm_path", "nm_base", "nm_path_aliases",
+    "desktop_ids", "wm_classes", "family", "packaging", "flatpak_id", "flatpak_filesystem",
+    "flatpak_talk_names",
+}
 data = json.loads(Path("config/browsers.json").read_text())
 browsers = data.get("browsers")
 if not isinstance(browsers, list) or not browsers:
@@ -153,12 +157,20 @@ for e in browsers:
     bid = e.get("id")
     schema = e.get("nm_schema")
     nm_path = e.get("nm_path") or ""
+    nm_base = e.get("nm_base") or "xdg_config"
+    if nm_base not in ("xdg_config", "home"):
+        print(f"ci-check: bad nm_base {nm_base!r} for {bid}", file=sys.stderr)
+        sys.exit(1)
     if schema not in ALLOWED:
         print(f"ci-check: bad nm_schema {schema!r} for {bid}", file=sys.stderr)
         sys.exit(1)
     if nm_path.startswith("/") or nm_path.startswith("~") or ".." in Path(nm_path).parts:
         print(f"ci-check: nm_path must be profile-relative ({bid})", file=sys.stderr)
         sys.exit(1)
+    for alias in e.get("nm_path_aliases") or []:
+        if alias.startswith("/") or alias.startswith("~") or ".." in Path(alias).parts:
+            print(f"ci-check: bad nm_path_aliases for {bid}", file=sys.stderr)
+            sys.exit(1)
     # Wrong-schema negative: chromium must not use mozilla path shape.
     if schema == "chromium" and "native-messaging-hosts" in nm_path.replace("\\", "/"):
         print(f"ci-check: chromium entry {bid} must not use mozilla nm_path shape", file=sys.stderr)
@@ -168,8 +180,8 @@ for e in browsers:
         sys.exit(1)
     if e.get("enabled"):
         enabled.append(bid)
-if enabled != ["brave", "chrome"]:
-    print(f"ci-check: enabled browsers must be exactly ['brave', 'chrome'], got {enabled!r}", file=sys.stderr)
+if enabled != ["brave", "chrome", "opera", "opera-flatpak"]:
+    print(f"ci-check: enabled browsers must be exactly ['brave', 'chrome', 'opera', 'opera-flatpak'], got {enabled!r}", file=sys.stderr)
     sys.exit(1)
 print("ci-check: browsers.json OK")
 PY
@@ -195,16 +207,25 @@ mkdir -p "${XDG_CONFIG_HOME}" "${XDG_STATE_HOME}" "${XDG_RUNTIME_DIR}" \
 python3 - <<'PY'
 import json, os, stat
 from pathlib import Path
+home = Path(os.environ["HOME"])
 cfg = Path(os.environ["XDG_CONFIG_HOME"])
 data = json.loads(Path("config/browsers.json").read_text())
+
+def resolve(e, rel):
+    base = e.get("nm_base") or "xdg_config"
+    return (home / rel) if base == "home" else (cfg / rel)
+
 for e in data["browsers"]:
-    d = cfg / e["nm_path"]
-    d.mkdir(parents=True, exist_ok=True)
-# Ensure no group/world-write under config (install refuses 022).
-for dirpath, dirnames, _filenames in os.walk(cfg):
-    mode = os.stat(dirpath).st_mode
-    if mode & (stat.S_IWGRP | stat.S_IWOTH):
-        os.chmod(dirpath, 0o755)
+    rels = [e["nm_path"]] + list(e.get("nm_path_aliases") or [])
+    for rel in rels:
+        resolve(e, rel).mkdir(parents=True, exist_ok=True)
+for root in (cfg, home / ".var"):
+    if not root.exists():
+        continue
+    for dirpath, _dirnames, _filenames in os.walk(root):
+        mode = os.stat(dirpath).st_mode
+        if mode & (stat.S_IWGRP | stat.S_IWOTH):
+            os.chmod(dirpath, 0o755)
 PY
 chmod 755 "${tmp}" "${tmp}/.local" "${tmp}/.local/bin" "${tmp}/.config" \
   "${tmp}/.local/share" "${tmp}/.local/share/gnome-shell" \
@@ -220,6 +241,8 @@ test -x "${tmp}/.local/bin/browser-tabs-host"
 test -f "${tmp}/.config/alkitect-browser-tabs/browsers.json"
 test -f "${tmp}/.local/share/gnome-shell/extensions/browser-tab-dock@alkitect/extension.js"
 test -f "${tmp}/.config/systemd/user/alkitect-browser-tabs.service"
+test -f "${tmp}/.local/share/alkitect-browser-tabs/mv3-opera-flatpak/forced-browser-id.js"
+test -f "${tmp}/.local/share/alkitect-browser-tabs/mv3-opera-flatpak/manifest.json"
 
 # Installed path must satisfy shell-fake greps
 ./scripts/verify-shell-fake.sh
@@ -229,26 +252,34 @@ python3 - <<'PY'
 import json, os, sys
 from pathlib import Path
 ext = Path("browser-extension/extension-id.txt").read_text().strip()
+home = Path(os.environ["HOME"])
 cfg = Path(os.environ["XDG_CONFIG_HOME"])
 data = json.loads(Path("config/browsers.json").read_text())
+
+def resolve(e, rel):
+    base = e.get("nm_base") or "xdg_config"
+    return (home / rel) if base == "home" else (cfg / rel)
+
 for e in data["browsers"]:
-    dest = cfg / e["nm_path"] / "org.alkitect.browser_tabs.json"
-    if e.get("enabled"):
-        if not dest.is_file():
-            print(f"ci-check: missing NM for enabled {e['id']}: {dest}", file=sys.stderr)
-            sys.exit(1)
-        nm = json.loads(dest.read_text())
-        origins = nm.get("allowed_origins") or []
-        if origins != [f"chrome-extension://{ext}/"]:
-            print(f"ci-check: allowed_origins {origins!r} != single id {ext}", file=sys.stderr)
-            sys.exit(1)
-        if any("*" in o for o in origins):
-            print("ci-check: wildcard origin forbidden", file=sys.stderr)
-            sys.exit(1)
-    else:
-        if dest.exists():
-            print(f"ci-check: disabled browser {e['id']} must not have NM JSON after install: {dest}", file=sys.stderr)
-            sys.exit(1)
+    rels = [e["nm_path"]] + list(e.get("nm_path_aliases") or [])
+    for rel in rels:
+        dest = resolve(e, rel) / "org.alkitect.browser_tabs.json"
+        if e.get("enabled"):
+            if not dest.is_file():
+                print(f"ci-check: missing NM for enabled {e['id']}: {dest}", file=sys.stderr)
+                sys.exit(1)
+            nm = json.loads(dest.read_text())
+            origins = nm.get("allowed_origins") or []
+            if origins != [f"chrome-extension://{ext}/"]:
+                print(f"ci-check: allowed_origins {origins!r} != single id {ext}", file=sys.stderr)
+                sys.exit(1)
+            if any("*" in o for o in origins):
+                print("ci-check: wildcard origin forbidden", file=sys.stderr)
+                sys.exit(1)
+        else:
+            if dest.exists():
+                print(f"ci-check: disabled browser {e['id']} must not have NM JSON after install: {dest}", file=sys.stderr)
+                sys.exit(1)
 print("ci-check: multi-NM enabled/disabled OK")
 PY
 
@@ -259,16 +290,25 @@ PY
 test ! -e "${tmp}/.local/bin/browser-tabs-host"
 test ! -e "${tmp}/.config/alkitect-browser-tabs/browsers.json"
 test ! -e "${tmp}/.local/share/gnome-shell/extensions/browser-tab-dock@alkitect"
+test ! -e "${tmp}/.local/share/alkitect-browser-tabs/mv3-opera-flatpak"
 python3 - <<'PY'
 import json, os, sys
 from pathlib import Path
+home = Path(os.environ["HOME"])
 cfg = Path(os.environ["XDG_CONFIG_HOME"])
 data = json.loads(Path("config/browsers.json").read_text())
+
+def resolve(e, rel):
+    base = e.get("nm_base") or "xdg_config"
+    return (home / rel) if base == "home" else (cfg / rel)
+
 for e in data["browsers"]:
-    dest = cfg / e["nm_path"] / "org.alkitect.browser_tabs.json"
-    if dest.exists():
-        print(f"ci-check: NM left after uninstall: {dest}", file=sys.stderr)
-        sys.exit(1)
+    rels = [e["nm_path"]] + list(e.get("nm_path_aliases") or [])
+    for rel in rels:
+        dest = resolve(e, rel) / "org.alkitect.browser_tabs.json"
+        if dest.exists():
+            print(f"ci-check: NM left after uninstall: {dest}", file=sys.stderr)
+            sys.exit(1)
 print("ci-check: uninstall cleared all NM JSON")
 PY
 
