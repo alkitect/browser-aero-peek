@@ -1,5 +1,5 @@
 [Unit]
-Description=Alkitect Browser Tabs D-Bus host (dock tab peek)
+Description=Browser Tabs D-Bus host (dock tab peek). Author: alkitect.
 Documentation=https://github.com/alkitect/browser-aero-peek
 # Logout keeps user@ + default.target; only graphical-session cycles.
 # WantedBy=default.target left the host dead after logout/in (2026-09-10).

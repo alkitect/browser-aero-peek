@@ -15,15 +15,15 @@ Thumbnails are screenshots from the last time that tab was visible — Chromium 
 
 Dock **click** stays stock minimize-or-previews. Peek is hover-only.
 
-**At this release, Brave, Google Chrome, Opera `.deb`, and Opera Flatpak are supported.** Other browsers stay on the roadmap — other Flatpak/Snap products stay Out.
+**At this release, Brave, Google Chrome, Opera `.deb`, Opera Flatpak, and Vivaldi `.deb` are supported.** Other browsers stay on the roadmap — other Flatpak/Snap products stay Out.
 
 ## Who this is for
 
 See **[docs/BROWSER-SUPPORT.md](docs/BROWSER-SUPPORT.md)** for the full In / Planned / Out matrix and enabled/disabled NM semantics.
 
-- **In:** Ubuntu 22.04 + GNOME Shell 42 **Wayland**, Ubuntu Dock, and **Brave**, **Google Chrome**, **Opera** `.deb`, and/or **Opera Flatpak** (`com.opera.Opera`)
+- **In:** Ubuntu 22.04 + GNOME Shell 42 **Wayland**, Ubuntu Dock, and **Brave**, **Google Chrome**, **Opera** `.deb`, **Opera Flatpak** (`com.opera.Opera`), and/or **Vivaldi** `.deb`
 - **In:** You keep several tabs open and want to pick one from the dock without guessing
-- **Planned (not enabled yet):** Vivaldi → Chromium → Edge; then Firefox; then Tor Browser (feasibility gate)
+- **Planned (not enabled yet):** Chromium → Edge; then Firefox; then Tor Browser (feasibility gate)
 - **Out:** GNOME Web (Epiphany); Snap browsers; other Flatpak browsers; Opera GX unless matched later; non-GNOME desktops; replacing the global dock click-action
 
 ## Quick start
@@ -35,7 +35,7 @@ chmod +x scripts/*.sh
 ./scripts/install-to-local.sh --enable-automation
 ```
 
-**What you installed:** three pieces — a user daemon (`alkitect-browser-tabs.service`), native-messaging hooks for **each enabled** browser (Brave + Chrome + Opera deb + Opera Flatpak), and Shell extension `browser-tab-dock@alkitect`. The host starts with your graphical session. You still load the add-on in each browser and enable the Shell extension yourself. `--enable-automation` enables the **systemd user** unit only (not sudoers / system-wide).
+**What you installed:** three pieces — a user daemon (`alkitect-browser-tabs.service`), native-messaging hooks for **each enabled** browser (Brave + Chrome + Opera deb + Opera Flatpak + Vivaldi), and Shell extension `browser-tab-dock@alkitect`. The host starts with your graphical session. You still load the add-on in each browser and enable the Shell extension yourself. `--enable-automation` enables the **systemd user** unit only (not sudoers / system-wide).
 
 **1. Brave** — open `brave://extensions` → Developer mode → Load unpacked → `browser-extension/`. Confirm the ID matches `browser-extension/extension-id.txt`. Fully quit and relaunch Brave, then run `browser-tabs-host cli list --browser brave`.
 
@@ -45,6 +45,8 @@ chmod +x scripts/*.sh
 
 **1d. Opera (Flatpak)** — open `opera://extensions` in Flatpak Opera → **Remove** any copy still pointing at `/run/flatpak/doc/…` → Load unpacked → `~/.local/share/alkitect-browser-tabs/mv3-opera-flatpak/` (must be that path, not a portal temp). Quit/relaunch Flatpak Opera, then `browser-tabs-host cli list --browser opera-flatpak`.
 
+**1e. Vivaldi** — open `vivaldi://extensions` → **Remove** any load from the shared `browser-extension/` folder → Load unpacked → `~/.local/share/alkitect-browser-tabs/mv3-vivaldi/` (forced `browserId=vivaldi`; Vivaldi’s reduced UA otherwise binds as `chrome`). Fully quit and relaunch Vivaldi, then `browser-tabs-host cli list --browser vivaldi`.
+
 **2. Shell** — Wayland needs a logout after enable (and after Shell metadata / matcher changes):
 
 ```bash
@@ -52,9 +54,9 @@ gnome-extensions enable browser-tab-dock@alkitect
 # log out and back in
 ```
 
-**3. Try it** — open one Brave, Chrome, or Opera (deb or Flatpak) window with at least two tabs. Hover that browser’s dock icon briefly; click a card to activate that tab. Clicking the icon itself still minimize-or-previews.
+**3. Try it** — open one Brave, Chrome, Opera (deb or Flatpak), or Vivaldi window with at least two tabs. Hover that browser’s dock icon briefly; click a card to activate that tab. Clicking the icon itself still minimize-or-previews.
 
-**Needs:** Ubuntu GNOME Wayland, Brave and/or Chrome and/or Opera `.deb` and/or Opera Flatpak, `systemd --user`, and a session where you can enable GNOME Shell extensions.
+**Needs:** Ubuntu GNOME Wayland, Brave and/or Chrome and/or Opera `.deb` and/or Opera Flatpak and/or Vivaldi `.deb`, `systemd --user`, and a session where you can enable GNOME Shell extensions.
 
 ## Check it works
 
@@ -97,7 +99,7 @@ Three small pieces share tab state with the dock:
 | `browser-tabs-host` | Native messaging ↔ session D-Bus |
 | Shell extension | Hover dwell on the Ubuntu Dock → peek strip; raise the window after Activate |
 
-Installed names: `browser-tabs-host`, `alkitect-browser-tabs.service`, Shell uuid `browser-tab-dock@alkitect`, Brave add-on “Alkitect Browser Tab Dock”.
+Installed names: `browser-tabs-host`, `alkitect-browser-tabs.service`, Shell “Browser Aero Peek” (`browser-tab-dock@alkitect`, author: alkitect), browser add-on “Browser Tab Dock” (author: alkitect).
 
 Versions: MV3 `browser-extension/manifest.json` (git tags track this) · Shell `metadata.json` integer (GNOME scheme). Deeper reading: [ARCHITECTURE](docs/ARCHITECTURE.md) · [ADR-001](docs/architecture/ADR-001-ipc-and-dock-intercept.md) · [SECURITY](docs/SECURITY.md).
 
@@ -108,7 +110,7 @@ Versions: MV3 `browser-extension/manifest.json` (git tags track this) · Shell `
 
 ## Limits & safety
 
-- **Linux + Ubuntu Dock + Brave/Chrome/Opera (`.deb` + Flatpak) at this tag** — other OSes, docks, and browsers are unsupported until their roadmap wave ships.
+- **Linux + Ubuntu Dock + Brave/Chrome/Opera (`.deb` + Flatpak)/Vivaldi (`.deb`) at this tag** — other OSes, docks, and browsers stay unsupported until their roadmap wave ships.
 - **One window per browser** with ≥2 tabs for peek; several windows of the same browser → no tab strip (stock window previews still work).
 - **Thumbnails are page screenshots** (more sensitive than titles). Same-UID processes on D-Bus or the host socket can read them — details in [SECURITY.md](docs/SECURITY.md).
 - Hover dwell and host rate limits reduce spam while scrubbing past the icon.

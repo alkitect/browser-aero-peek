@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.5.0
+
+- Enable Vivaldi (`.deb`): registry `vivaldi.enabled`; Shell matcher (metadata 15); NM under `vivaldi/NativeMessagingHosts`; staged MV3 with forced `browserId=vivaldi` (reduced UA otherwise binds as Chrome); Flatpak/Snap Out for this wave.
+- Native bridge: exit when daemon socket dies so Chromium-family browsers (incl. Vivaldi) reconnect after host restart.
+- MV3 / Shell: drop “Alkitect” from display names; credit `alkitect` as author in metadata/description.
+
 ## 0.4.0
 
 - Enable Opera dual packaging: registry `opera` (`.deb`) + `opera-flatpak` (Flatpak `com.opera.Opera`); home-based NM + aliases; staged MV3 with forced `browserId`; Shell matcher Flatpak-before-native.

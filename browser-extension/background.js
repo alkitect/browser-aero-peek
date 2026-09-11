@@ -323,6 +323,27 @@ function detectBrowserId() {
   } catch (_) {
     /* ignore */
   }
+  // userAgentData brands first — reduced UA often drops "Vivaldi/…" in SW.
+  try {
+    const brands = (navigator.userAgentData && navigator.userAgentData.brands) || [];
+    for (const b of brands) {
+      const brand = String((b && b.brand) || "");
+      if (/vivaldi/i.test(brand)) {
+        return "vivaldi";
+      }
+      if (/opera/i.test(brand)) {
+        return "opera";
+      }
+      if (/microsoft edge/i.test(brand)) {
+        return "edge";
+      }
+      if (/brave/i.test(brand)) {
+        return "brave";
+      }
+    }
+  } catch (_) {
+    /* ignore */
+  }
   const ua = navigator.userAgent || "";
   if (/Edg\//.test(ua)) {
     return "edge";
@@ -330,7 +351,7 @@ function detectBrowserId() {
   if (/OPR\//.test(ua) || /Opera\//.test(ua)) {
     return "opera";
   }
-  if (/Vivaldi\//.test(ua)) {
+  if (/Vivaldi\//i.test(ua) || /\bVivaldi\b/i.test(ua)) {
     return "vivaldi";
   }
   if (/Brave[ /]/.test(ua) || /\bBrave\b/.test(ua)) {

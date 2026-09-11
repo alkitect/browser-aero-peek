@@ -10,7 +10,7 @@ Release-source matrix for **browser-aero-peek**. Runtime enablement is controlle
 | **Google Chrome** (`.deb` / native) | **In** | `enabled: true`; `.desktop` `google-chrome.desktop` / `google-chrome`; WM `google-chrome` / `Google-chrome`; NM under `google-chrome/NativeMessagingHosts` |
 | **Opera** (`.deb` / native) | **In** | Registry id `opera`; `.desktop` `opera.desktop` / `opera` / `opera-browser.desktop`; WM `opera` / `Opera`; NM under `opera/NativeMessagingHosts` |
 | **Opera** (Flatpak `com.opera.Opera`) | **In** | Registry id `opera-flatpak` (`family: opera`); `.desktop` `com.opera.Opera.desktop`; **no WM class match** (avoids clash with native); NM under `~/.var/app/com.opera.Opera/config/opera/NativeMessagingHosts` (+ alias `…/google-chrome/NativeMessagingHosts`) via `browser-tabs-nm-flatpak` → `flatpak-spawn --host`; install stages MV3 at `~/.local/share/alkitect-browser-tabs/mv3-opera-flatpak/` with forced `browserId`; overrides: `~/.local/bin:ro`, share dir `:ro`, talk `org.freedesktop.Flatpak` |
-| Vivaldi | Planned | Disabled stub |
+| **Vivaldi** (`.deb` / native) | **In** | Registry id `vivaldi`; `.desktop` `vivaldi-stable.desktop` / `vivaldi-stable` (vendor desktop may omit `StartupWMClass`); WM `vivaldi-stable` / `Vivaldi-stable`; NM under `vivaldi/NativeMessagingHosts`; install stages MV3 at `~/.local/share/alkitect-browser-tabs/mv3-vivaldi/` with forced `browserId` (reduced UA looks like Chrome). **Flatpak/Snap Out** for this enable |
 | Chromium | Planned | Disabled stub |
 | Edge | Planned | Disabled stub |
 | Firefox | Planned | `nm_schema: mozilla` reserved; packaging gate before NM |
@@ -24,16 +24,17 @@ Release-source matrix for **browser-aero-peek**. Runtime enablement is controlle
 - **Disabled:** install **must not** create NM JSON under that `nm_path` (even briefly). Uninstall still removes orphans if any exist.
 - **Wrong-lane:** installing the Brave-only maintenance product (`brave-aero-peek`) overwrites the same host UUID / unit / NM basename — do not alternate. Rollback: reinstall from the lane you want.
 
-## Chrome / Opera notes
+## Chrome / Opera / Vivaldi notes
 
 - Same unpacked MV3 + same extension id as Brave (shared `allowed_origins`). Isolation = registry + per-browser NM dir + host routing by `browserId`.
 - **Native** Brave / Chrome / Opera: Load unpacked → `browser-extension/`. Quit/relaunch after install.
+- **Vivaldi:** Load unpacked → staged `~/.local/share/alkitect-browser-tabs/mv3-vivaldi/` (same id; `forced-browser-id.js` so hello binds as `vivaldi` — reduced UA otherwise looks like Chrome).
 - **Opera Flatpak:** Load unpacked → staged `~/.local/share/alkitect-browser-tabs/mv3-opera-flatpak/` (same id; `forced-browser-id.js` so hello binds as `opera-flatpak`). After logout/reboot, **remove** any old load that still points at `/run/flatpak/doc/…` and load the staged path again (install grants that share dir `:ro`). NM uses `flatpak-spawn --host` (talk-name + `~/.local/bin:ro`).
-- Hover that browser’s dock icon (one window, ≥2 tabs) for **that** browser’s tabs only. Flatpak dock matching uses desktop id `com.opera.Opera.desktop` first; both packages share `StartupWMClass=Opera`, so Shell 14 also disambiguates via `Exec` and retries the sibling peer on `NoExtension`.
+- Hover that browser’s dock icon (one window, ≥2 tabs) for **that** browser’s tabs only. Flatpak dock matching uses desktop id `com.opera.Opera.desktop` first; both Opera packages share `StartupWMClass=Opera`, so Shell disambiguates via `Exec` and retries the sibling peer on `NoExtension`.
 
 ## Packaging
 
-Native `.deb` / distro packages for Brave, Chrome, and Opera. **Opera Flatpak** is the first packaging-variant pilot (`opera-flatpak`). Snap and other Flatpak browsers stay Out until a dedicated plan says otherwise.
+Native `.deb` / distro packages for Brave, Chrome, Opera, and Vivaldi. **Opera Flatpak** is the packaging-variant pilot (`opera-flatpak`). Snap and other Flatpak browsers stay Out until a dedicated plan says otherwise.
 
 ## See also
 

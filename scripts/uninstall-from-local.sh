@@ -22,6 +22,7 @@ rm -f "${SYSTEMD_USER}/alkitect-browser-tabs.service"
 rm -f "${BIN}/browser-tabs-host" "${BIN}/browser-tabs-nm" "${BIN}/browser-tabs-nm-flatpak"
 rm -rf "${CFG_DIR}"
 rm -rf "${SHARE_DIR}/mv3-opera-flatpak"
+rm -rf "${SHARE_DIR}/mv3-vivaldi"
 
 if [[ -f "${BROWSERS_JSON}" ]]; then
   python3 - <<PY

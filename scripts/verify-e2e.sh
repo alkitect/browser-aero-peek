@@ -5,17 +5,18 @@ set -euo pipefail
 
 cat <<'EOF'
 verify-e2e (human_gate) — after: gnome-extensions enable browser-tab-dock@alkitect + logout/in
-Shell metadata version 9 (peek polish). MV3 reload only if you changed the Brave extension.
+Shell metadata version 15 (Vivaldi matcher). Reload MV3 in each browser you use; Shell needs logout/in after metadata bumps.
 
-[ ] browser-tabs-host cli status → extension_connected true
+[ ] browser-tabs-host cli status → peers include enabled browsers you loaded
 [ ] Card header: favicon + title above thumb (not under)
 [ ] Unvisited tab frame shows “No preview yet”; after visit, thumb appears
-[ ] Scrub across dock without pausing on Brave → no peek flash
-[ ] Pause ~100ms on Brave → strip fades in
+[ ] Scrub across dock without pausing on a browser icon → no peek flash
+[ ] Pause ~100ms on Brave / Chrome / Opera / Vivaldi → strip fades in
 [ ] Move icon → app-name tooltip → strip without dismiss (leave corridor)
 [ ] Leave sideways off dock → strip fades out
 [ ] Click a card → tab activates; dock click still minimize-or-previews
-[ ] Multi-window Brave: hover does NOT show peek strip
+[ ] Multi-window same browser: hover does NOT show peek strip
+[ ] Vivaldi: `cli list --browser vivaldi` OK; hover Vivaldi dock icon (1 window, ≥2 tabs)
 
 Record PASS/FAIL in chat.
 EOF

@@ -8,7 +8,7 @@ README variant: B
 
 **First public tag: v0.2.9**
 
-**Current tag: v0.4.0**
+**Current tag: v0.5.0**
 
 **V-001 count (organic, not invent / not copy):**
 
@@ -21,16 +21,17 @@ README variant: B
 | `v0.2.10` | Shared-prep (registry SSOT, multiplex bind hello, scoped D-Bus/CLI, multi-NM ci) — patch; Brave still only `enabled` browser |
 | `v0.3.0` | First non-Brave enable: Google Chrome `.deb` — **minor** |
 | `v0.4.0` | Opera `.deb` + Opera Flatpak (packaging-variant pilot) + Shell 14 WM-class disambiguation — **minor** |
+| `v0.5.0` | Vivaldi `.deb` (staged MV3 forced `browserId`; Flatpak/Snap Out) + NM reconnect-on-daemon-death — **minor** |
 
-Version triad (current): PUBLISH `Current tag: v0.4.0` · MV3 `0.4.0` · CHANGELOG `## 0.4.0`. First public tag line stays `v0.2.9`.
+Version triad (current): PUBLISH `Current tag: v0.5.0` · MV3 `0.5.0` · CHANGELOG `## 0.5.0`. First public tag line stays `v0.2.9`.
 
 Never copy another alkitect repo’s tag. Use `RC-BEFORE-1.0` in this file only for an intentional 0.9.x RC.
 
 ```bash
 ./scripts/ci-check.sh
-git tag -a v0.4.0 -m "v0.4.0"
+git tag -a v0.5.0 -m "v0.5.0"
 git push origin main
-git push origin v0.4.0
+git push origin v0.5.0
 ```
 
 Repo URL: `https://github.com/alkitect/browser-aero-peek`
@@ -61,7 +62,7 @@ Priority order:
 2. Google Chrome — **supported**
 3. Opera `.deb` — **supported** (`v0.4.0`)
 4. Opera Flatpak (`opera-flatpak`) — **supported** (`v0.4.0`; packaging pilot)
-5. Vivaldi
+5. Vivaldi — **supported** (`v0.5.0`; Flatpak/Snap Out)
 6. Chromium
 7. Microsoft Edge
 8. Mozilla Firefox
@@ -70,15 +71,15 @@ Priority order:
 
 ## Human gate
 
-Published through **v0.4.0** (Brave + Chrome + Opera deb + Opera Flatpak). Optional soak: logout/in + `./scripts/verify-e2e.sh` scrub/corridor/header checklist (does not block the tag).
+Published through **v0.5.0** (Brave + Chrome + Opera deb + Opera Flatpak + Vivaldi `.deb`). Optional soak: logout/in + `./scripts/verify-e2e.sh` scrub/corridor/header checklist (does not block the tag).
 
 ## GitHub About
 
 | Field | Value |
 |-------|--------|
-| Description | Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera supported |
+| Description | Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera + Vivaldi supported |
 | Website | _(empty — tip via README Ko-fi badge)_ |
-| Topics | `linux`, `ubuntu`, `gnome`, `wayland`, `brave`, `chrome`, `opera`, `gnome-shell-extension`, `dock` |
+| Topics | `linux`, `ubuntu`, `gnome`, `wayland`, `brave`, `chrome`, `opera`, `vivaldi`, `gnome-shell-extension`, `dock` |
 
 ```bash
 gh repo edit alkitect/browser-aero-peek \

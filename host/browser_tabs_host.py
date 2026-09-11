@@ -276,7 +276,7 @@ class Daemon:
             hdr = self._recv_exact(conn, 4)
             (n,) = struct.unpack("<I", hdr)
             if n > 10_000_000 or n < 2:
-                raise OSError("bad hello size")
+                raise OSError(f"bad hello size n={n} hdr={hdr.hex()}")
             body = self._recv_exact(conn, n)
             msg = json.loads(body.decode("utf-8"))
             if not isinstance(msg, dict) or msg.get("type") != "hello":
@@ -290,6 +290,7 @@ class Daemon:
             conn.settimeout(None)
         except Exception as e:
             sys.stderr.write(f"browser-tabs-host: reject NM peer: {e}\n")
+            sys.stderr.flush()
             try:
                 conn.close()
             except OSError:
@@ -516,10 +517,14 @@ def run_native() -> int:
         except OSError:
             pass
         finally:
+            # Daemon gone / peer closed — force exit so the browser fires
+            # onDisconnect and reconnects (closing stdin alone is not enough
+            # on some Chromium forks, e.g. Vivaldi, which leave a zombie host).
             try:
-                sys.stdin.close()
+                sock.close()
             except OSError:
                 pass
+            os._exit(0)
 
     t = threading.Thread(target=sock_to_stdout, daemon=True)
     t.start()

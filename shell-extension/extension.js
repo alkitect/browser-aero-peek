@@ -76,6 +76,11 @@ const BROWSER_MATCHERS = [
         desktopIds: ['opera.desktop', 'opera', 'opera-browser.desktop'],
         wmClasses: ['opera', 'Opera'],
     },
+    {
+        id: 'vivaldi',
+        desktopIds: ['vivaldi-stable.desktop', 'vivaldi-stable'],
+        wmClasses: ['vivaldi-stable', 'Vivaldi-stable'],
+    },
 ];
 
 let _proxy = null;
@@ -741,7 +746,7 @@ class Extension {
                 if (!this._warnedNoExt && msg.indexOf('NoExtension') !== -1) {
                     this._warnedNoExt = true;
                     Main.notify('Browser Tab Dock',
-                        'Browser extension not connected. Open the browser, reload Alkitect Tab Dock, then hover again.');
+                        'Browser extension not connected. Open the browser, reload Browser Tab Dock, then hover again.');
                 }
             }
         });

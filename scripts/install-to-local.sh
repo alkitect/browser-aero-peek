@@ -73,6 +73,13 @@ mkdir -p "${FLATPAK_EXT}"
 cp -a "${ROOT}/browser-extension/." "${FLATPAK_EXT}/"
 printf '%s\n' 'var FORCED_BROWSER_ID = "opera-flatpak";' >"${FLATPAK_EXT}/forced-browser-id.js"
 
+# Vivaldi: reduced UA often looks like Chrome in the SW — stage forced id (same key/id).
+VIVALDI_EXT="${SHARE_DIR}/mv3-vivaldi"
+rm -rf "${VIVALDI_EXT}"
+mkdir -p "${VIVALDI_EXT}"
+cp -a "${ROOT}/browser-extension/." "${VIVALDI_EXT}/"
+printf '%s\n' 'var FORCED_BROWSER_ID = "vivaldi";' >"${VIVALDI_EXT}/forced-browser-id.js"
+
 # NM manifests: only enabled chromium-schema browsers (mozilla reserved for later waves).
 python3 - <<PY
 import json
@@ -209,18 +216,20 @@ elif [[ -n "${ALKITECT_CI_TMP:-}" ]]; then
 fi
 
 echo
-echo "Next (enabled browsers — Brave + Chrome + Opera deb + Opera Flatpak):"
+echo "Next (enabled browsers — Brave + Chrome + Opera deb + Opera Flatpak + Vivaldi):"
 echo "  Brave:  brave://extensions  → Load unpacked → ${ROOT}/browser-extension"
 echo "  Chrome: chrome://extensions → Load unpacked → ${ROOT}/browser-extension"
 echo "  Opera (.deb): opera://extensions → Load unpacked → ${ROOT}/browser-extension"
 echo "  Opera (Flatpak): opera://extensions → Remove portal loads → Load unpacked → ${FLATPAK_EXT}"
 echo "       (forced hello browserId=opera-flatpak; NM via flatpak-spawn --host; same extension ID ${EXT_ID})"
+echo "  Vivaldi: vivaldi://extensions → Remove shared-folder load → Load unpacked → ${VIVALDI_EXT}"
+echo "       (forced hello browserId=vivaldi; same extension ID ${EXT_ID} — reduced UA looks like Chrome)"
 echo "  Confirm ID is ${EXT_ID}; fully quit and relaunch each browser"
 echo "  browser-tabs-host cli status"
-echo "  browser-tabs-host cli list --browser brave|chrome|opera|opera-flatpak"
+echo "  browser-tabs-host cli list --browser brave|chrome|opera|opera-flatpak|vivaldi"
 echo
 echo "Next (Shell hover peek — Wayland needs logout/in):"
 echo "  gnome-extensions enable ${EXT_UUID}"
 echo "  then log out and back in"
-echo "  Hover Brave / Chrome / Opera (.deb or Flatpak) dock icon (1 window, ≥2 tabs)"
+echo "  Hover Brave / Chrome / Opera (.deb or Flatpak) / Vivaldi dock icon (1 window, ≥2 tabs)"
 echo "  ./scripts/verify-e2e.sh   # human checklist"

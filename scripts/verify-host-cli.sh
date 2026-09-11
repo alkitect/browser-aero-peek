@@ -21,7 +21,7 @@ fi
   exit 1
 }
 
-# Test registry: four enabled chromium peers for multiplex soak.
+# Test registry: five enabled chromium peers for multiplex soak.
 TMP_REG="$(mktemp)"
 export ALKITECT_BROWSERS_JSON="${TMP_REG}"
 python3 - <<PY
@@ -29,7 +29,7 @@ import json
 from pathlib import Path
 src = json.loads(Path("${ROOT}/config/browsers.json").read_text())
 for e in src["browsers"]:
-    e["enabled"] = e["id"] in ("brave", "chrome", "opera", "opera-flatpak")
+    e["enabled"] = e["id"] in ("brave", "chrome", "opera", "opera-flatpak", "vivaldi")
 Path("${TMP_REG}").write_text(json.dumps(src, indent=2) + "\n")
 PY
 
@@ -113,9 +113,11 @@ start_fake_peer opera 100 200 300
 FAKE_OPERA=$!
 start_fake_peer opera-flatpak 1000 2000 3000
 FAKE_OPERA_FP=$!
+start_fake_peer vivaldi 10000 20000 30000
+FAKE_VIVALDI=$!
 
 cleanup_all() {
-  kill "${FAKE_BRAVE}" "${FAKE_CHROME}" "${FAKE_OPERA}" "${FAKE_OPERA_FP}" 2>/dev/null || true
+  kill "${FAKE_BRAVE}" "${FAKE_CHROME}" "${FAKE_OPERA}" "${FAKE_OPERA_FP}" "${FAKE_VIVALDI}" 2>/dev/null || true
   kill "${DAEMON_PID}" 2>/dev/null || true
   rm -f "${TMP_REG}"
   if [[ "${STOPPED_UNIT}" -eq 1 ]]; then
@@ -128,7 +130,7 @@ sleep 0.5
 echo "=== status ==="
 STATUS="$(browser-tabs-host cli status)"
 echo "${STATUS}"
-echo "${STATUS}" | python3 -c 'import json,sys; d=json.load(sys.stdin); p=set(d.get("peers",[])); assert p>={"brave","chrome","opera","opera-flatpak"}, d'
+echo "${STATUS}" | python3 -c 'import json,sys; d=json.load(sys.stdin); p=set(d.get("peers",[])); assert p>={"brave","chrome","opera","opera-flatpak","vivaldi"}, d'
 
 echo "=== list brave ==="
 OUT="$(browser-tabs-host cli list --browser brave)"
@@ -159,6 +161,11 @@ OUT_OF="$(browser-tabs-host cli list --browser opera-flatpak)"
 echo "${OUT_OF}"
 echo "${OUT_OF}" | python3 -c 'import json,sys; t=json.load(sys.stdin); assert t[0]["title"]=="opera-flatpak-A", t'
 
+echo "=== list vivaldi ==="
+OUT_V="$(browser-tabs-host cli list --browser vivaldi)"
+echo "${OUT_V}"
+echo "${OUT_V}" | python3 -c 'import json,sys; t=json.load(sys.stdin); assert t[0]["title"]=="vivaldi-A", t'
+
 echo "=== activate brave 2 ==="
 browser-tabs-host cli activate --browser brave 2
 
@@ -181,13 +188,14 @@ mod = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
 spec.loader.exec_module(mod)
 base = mod.thumb_cache_dir()
-for bid in ("brave", "chrome", "opera", "opera-flatpak"):
+for bid in ("brave", "chrome", "opera", "opera-flatpak", "vivaldi"):
     (base / bid).mkdir(parents=True, exist_ok=True)
     (base / bid / "tab-99.png").write_bytes(b"x")
 assert mod.prune_thumb_files("brave", {1, 2, 3}) >= 1
 assert (base / "chrome" / "tab-99.png").is_file()
 assert (base / "opera-flatpak" / "tab-99.png").is_file()
-for bid in ("chrome", "opera", "opera-flatpak"):
+assert (base / "vivaldi" / "tab-99.png").is_file()
+for bid in ("chrome", "opera", "opera-flatpak", "vivaldi"):
     (base / bid / "tab-99.png").unlink()
 print("thumb prune scoped OK")
 PY

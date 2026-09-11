@@ -51,7 +51,7 @@
     },
     {
       "id": "vivaldi",
-      "enabled": false,
+      "enabled": true,
       "nm_schema": "chromium",
       "nm_base": "xdg_config",
       "nm_path": "vivaldi/NativeMessagingHosts",
