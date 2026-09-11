@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+## 0.6.1
+
+- Docs: mark `brave-aero-peek` as deprecated in Related + BROWSER-SUPPORT wrong-lane note; this repo remains the only daily driver.
+
 ## 0.6.0
 
 - Enable Chromium (Snap): registry `chromium` with `packaging: snap`; Shell matcher (metadata 16); NM under snap profile + `~/bin` host bridge + home sock (strict snap AppArmor); staged MV3 forced `browserId`; Flatpak Chromium deferred.

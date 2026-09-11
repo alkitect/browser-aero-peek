@@ -22,7 +22,7 @@ Release-source matrix for **browser-aero-peek**. Runtime enablement is controlle
 
 - **Enabled:** install writes Native Messaging JSON under that browser’s profile-relative `nm_path` (and `nm_path_aliases` when set) with exactly one `allowed_origins` (shared extension id). `nm_base` is `xdg_config` (default) or `home` (Flatpak `.var/...` or Snap `snap/...`).
 - **Disabled:** install **must not** create NM JSON under that `nm_path` (even briefly). Uninstall still removes orphans if any exist.
-- **Wrong-lane:** installing the Brave-only maintenance product (`brave-aero-peek`) overwrites the same host UUID / unit / NM basename — do not alternate. Rollback: reinstall from the lane you want.
+- **Wrong-lane:** installing the deprecated Brave-only product (`brave-aero-peek`) overwrites the same host UUID / unit / NM basename — do not alternate. Use this repo only.
 
 ## Chrome / Opera / Vivaldi / Chromium notes
 

@@ -107,8 +107,8 @@ Versions: MV3 `browser-extension/manifest.json` (git tags track this) · Shell `
 
 ## Related
 
-- **Brave-only maintenance lane:** [alkitect/brave-aero-peek](https://github.com/alkitect/brave-aero-peek) — same host UUID/service; does **not** receive multi-browser (Wave Chromium+) commits.
-- **Install clash:** Installing either product overwrites the same unit/UUID/NM hook. Do not alternate. After cutover, daily driver = **this** repo only. Rollback: reinstall from `brave-aero-peek`.
+- **Deprecated Brave-only lane:** [alkitect/brave-aero-peek](https://github.com/alkitect/brave-aero-peek) — frozen; same host UUID/service. Do not use for new installs.
+- **Install clash:** Installing either product overwrites the same unit/UUID/NM hook. Do not alternate. Daily driver = **this** repo only.
 
 ## Limits & safety
 
