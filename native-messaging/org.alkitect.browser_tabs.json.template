@@ -1,0 +1,9 @@
+{
+  "name": "org.alkitect.browser_tabs",
+  "description": "Alkitect Browser Tabs host (GNOME dock tab peek)",
+  "path": "HOST_PATH_PLACEHOLDER",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://EXT_ID_PLACEHOLDER/"
+  ]
+}
