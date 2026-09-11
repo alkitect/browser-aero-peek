@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.3.0
+
+- Enable Google Chrome (`.deb`): registry `chrome.enabled`, Shell matcher, dual NM install/ci, BROWSER-SUPPORT / README In.
+- Install: chmod group-writable Chromium NM dirs we own (Chrome profile often 775).
+
 ## 0.2.10
 
 - Shared-prep: `config/browsers.json` SSOT; host multiplex + bind hello; D-Bus/CLI scoped by `--browser`; Shell table matcher; multi-NM ci (enabled positive / disabled absent); BROWSER-SUPPORT + concurrent-browser SECURITY/ADR notes.

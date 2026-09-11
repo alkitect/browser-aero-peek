@@ -8,7 +8,7 @@ README variant: B
 
 **First public tag: v0.2.9**
 
-**Current tag: v0.2.10**
+**Current tag: v0.3.0**
 
 **V-001 count (organic, not invent / not copy):**
 
@@ -19,16 +19,17 @@ README variant: B
 | Why not `v0.2.8` | Already Brave’s first public tag — do not copy sibling tags |
 | Why not greenfield `v0.1.0` | Same installable stack as Brave tip; cutover is rename + dual-lane docs + browser roadmap matrix (no new browser runtime feats) → **patch** after inherited `0.2.8` |
 | `v0.2.10` | Shared-prep (registry SSOT, multiplex bind hello, scoped D-Bus/CLI, multi-NM ci) — patch; Brave still only `enabled` browser |
+| `v0.3.0` | First non-Brave enable: Google Chrome `.deb` — **minor** |
 
-Version triad (current): PUBLISH `Current tag: v0.2.10` · MV3 `0.2.10` · CHANGELOG `## 0.2.10`. First public tag line stays `v0.2.9`.
+Version triad (current): PUBLISH `Current tag: v0.3.0` · MV3 `0.3.0` · CHANGELOG `## 0.3.0`. First public tag line stays `v0.2.9`.
 
 Never copy another alkitect repo’s tag. Use `RC-BEFORE-1.0` in this file only for an intentional 0.9.x RC.
 
 ```bash
 ./scripts/ci-check.sh
-git tag -a v0.2.10 -m "v0.2.10"
+git tag -a v0.3.0 -m "v0.3.0"
 git push origin main
-git push origin v0.2.10
+git push origin v0.3.0
 ```
 
 Repo URL: `https://github.com/alkitect/browser-aero-peek`
@@ -55,8 +56,8 @@ Repo URL: `https://github.com/alkitect/browser-aero-peek`
 
 Priority order (cutover does **not** ship these install paths):
 
-1. Brave — **supported** at cutover
-2. Google Chrome
+1. Brave — **supported**
+2. Google Chrome — **supported** (Wave Chromium first enable)
 3. Opera
 4. Vivaldi
 5. Chromium
@@ -67,15 +68,15 @@ Priority order (cutover does **not** ship these install paths):
 
 ## Human gate
 
-Published through **v0.2.10** (shared-prep). Optional soak: logout/in + `./scripts/verify-e2e.sh` scrub/corridor/header checklist (does not block the tag).
+Published through **v0.3.0** (Brave + Chrome). Optional soak: logout/in + `./scripts/verify-e2e.sh` scrub/corridor/header checklist (does not block the tag).
 
 ## GitHub About
 
 | Field | Value |
 |-------|--------|
-| Description | Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave supported at cutover |
+| Description | Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome supported |
 | Website | _(empty — tip via README Ko-fi badge)_ |
-| Topics | `linux`, `ubuntu`, `gnome`, `wayland`, `brave`, `gnome-shell-extension`, `dock` |
+| Topics | `linux`, `ubuntu`, `gnome`, `wayland`, `brave`, `chrome`, `gnome-shell-extension`, `dock` |
 
 ```bash
 gh repo edit alkitect/browser-aero-peek \

@@ -6,8 +6,8 @@ Release-source matrix for **browser-aero-peek**. Runtime enablement is controlle
 
 | Browser | Status | Notes |
 |---------|--------|--------|
-| **Brave** (`.deb` / native) | **In** | Only browser with `enabled: true` after shared-prep |
-| Chrome | Planned | Disabled stub in registry; Wave Chromium child plan |
+| **Brave** (`.deb` / native) | **In** | `enabled: true` |
+| **Google Chrome** (`.deb` / native) | **In** | `enabled: true`; `.desktop` `google-chrome.desktop` / `google-chrome`; WM `google-chrome` / `Google-chrome`; NM under `google-chrome/NativeMessagingHosts` |
 | Opera | Planned | Disabled stub |
 | Vivaldi | Planned | Disabled stub |
 | Chromium | Planned | Disabled stub |
@@ -22,6 +22,12 @@ Release-source matrix for **browser-aero-peek**. Runtime enablement is controlle
 - **Enabled:** install writes Native Messaging JSON under that browser’s profile-relative `nm_path` with exactly one `allowed_origins` (shared extension id).
 - **Disabled:** install **must not** create NM JSON under that `nm_path` (even briefly). Uninstall still removes orphans if any exist.
 - **Wrong-lane:** installing the Brave-only maintenance product (`brave-aero-peek`) overwrites the same host UUID / unit / NM basename — do not alternate. Rollback: reinstall from the lane you want.
+
+## Chrome notes
+
+- Same unpacked MV3 + same extension id as Brave (shared `allowed_origins`). Isolation = registry + per-browser NM dir + host routing by `browserId`.
+- Load the add-on in Chrome via `chrome://extensions` → Load unpacked → `browser-extension/`. Quit/relaunch Chrome after install.
+- Hover the **Chrome** dock icon (one window, ≥2 tabs) for Chrome tabs only; Brave hover stays Brave-only.
 
 ## Packaging
 

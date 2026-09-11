@@ -13,7 +13,7 @@
 - `ListTabs` / `Activate` require a registry browser key. Activate with a tab id that was not listed for that browser → **ForeignTab** (fail-closed). This prevents cross-browser bleed when tab numeric ids collide.
 - Thumb/runtime paint paths are prefixed `{browserId}/tab-{tabId}` on host and Shell.
 - **If routing is wrong** (last-writer-wins, shared global tab cache, missing browser key), same-UID callers can see or activate the wrong browser’s tabs — treat concurrent-browser routing as a trust-plane control, not a convenience.
-- **Shared MV3 blast radius:** one pinned extension id / `allowed_origins` origin is reused across Chromium-family NM dirs when multiple browsers are enabled. Compromise of that origin affects every enabled Chromium NM lane. Do not widen origins; do not fork keys casually.
+- **Shared MV3 blast radius:** one pinned extension id / `allowed_origins` origin is reused across Chromium-family NM dirs when multiple browsers are enabled (Brave + Chrome today). Compromise of that origin affects every enabled Chromium NM lane. Do not widen origins; do not fork keys casually. Dual-NM: two profile dirs, one shared origin, host routes by `browserId` on the same-UID socket.
 
 ## Favicon URLs / thumbnails
 

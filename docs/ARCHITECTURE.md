@@ -29,7 +29,7 @@ On **Linux Ubuntu + GNOME Wayland**, show browser **tab titles, favicons, and ca
 ## Trust
 
 - Session bus + `$XDG_RUNTIME_DIR` socket = same-UID boundary.
-- NM `allowed_origins` single extension ID per written manifest; isolation seam = registry + per-browser NM dirs + per-browser host routing (not separate host processes).
+- NM `allowed_origins` single extension ID per written manifest; isolation seam = registry + per-browser NM dirs + per-browser host routing (not separate host processes). **Dual-NM (Brave + Chrome):** same MV3 id written into two NativeMessagingHosts dirs; ListTabs/Activate carry the browser key so same-UID socket traffic stays lane-scoped.
 
 ## See also
 

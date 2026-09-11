@@ -60,6 +60,11 @@ const BROWSER_MATCHERS = [
         desktopIds: ['brave-browser.desktop', 'brave-browser'],
         wmClasses: ['brave-browser'],
     },
+    {
+        id: 'chrome',
+        desktopIds: ['google-chrome.desktop', 'google-chrome'],
+        wmClasses: ['google-chrome', 'Google-chrome'],
+    },
 ];
 
 let _proxy = null;

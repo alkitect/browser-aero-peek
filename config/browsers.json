@@ -10,7 +10,7 @@
     },
     {
       "id": "chrome",
-      "enabled": false,
+      "enabled": true,
       "nm_schema": "chromium",
       "nm_path": "google-chrome/NativeMessagingHosts",
       "desktop_ids": ["google-chrome.desktop", "google-chrome"],

@@ -15,15 +15,15 @@ Thumbnails are screenshots from the last time that tab was visible — Chromium 
 
 Dock **click** stays stock minimize-or-previews. Peek is hover-only.
 
-**At this cutover tag, only Brave `.deb` is supported.** Other browsers are on the roadmap below — this release does not ship Chrome/Firefox/Tor install paths yet.
+**At this release, Brave and Google Chrome `.deb` are supported.** Other browsers stay on the roadmap — Flatpak/Snap stay Out.
 
 ## Who this is for
 
 See **[docs/BROWSER-SUPPORT.md](docs/BROWSER-SUPPORT.md)** for the full In / Planned / Out matrix and enabled/disabled NM semantics.
 
-- **In:** Ubuntu 22.04 + GNOME Shell 42 **Wayland**, Ubuntu Dock, and the **Brave `.deb`** (only `enabled` browser after shared-prep)
-- **In:** You keep several Brave tabs open and want to pick one from the dock without guessing
-- **Planned (not enabled yet):** Chrome → Opera → Vivaldi → Chromium → Edge; then Firefox; then Tor Browser (feasibility gate)
+- **In:** Ubuntu 22.04 + GNOME Shell 42 **Wayland**, Ubuntu Dock, and the **Brave `.deb`** or **Google Chrome `.deb`** (native only)
+- **In:** You keep several tabs open and want to pick one from the dock without guessing
+- **Planned (not enabled yet):** Opera → Vivaldi → Chromium → Edge; then Firefox; then Tor Browser (feasibility gate)
 - **Out:** GNOME Web (Epiphany); Flatpak or Snap browsers; non-GNOME desktops; replacing the global dock click-action
 
 ## Quick start
@@ -35,9 +35,11 @@ chmod +x scripts/*.sh
 ./scripts/install-to-local.sh --enable-automation
 ```
 
-**What you installed:** three pieces — a user daemon (`alkitect-browser-tabs.service`), Brave’s native-messaging hook, and Shell extension `browser-tab-dock@alkitect`. The host starts with your graphical session. You still load the Brave add-on and enable the Shell extension yourself. `--enable-automation` enables the **systemd user** unit only (not sudoers / system-wide).
+**What you installed:** three pieces — a user daemon (`alkitect-browser-tabs.service`), native-messaging hooks for **each enabled** browser (Brave + Chrome), and Shell extension `browser-tab-dock@alkitect`. The host starts with your graphical session. You still load the add-on in each browser and enable the Shell extension yourself. `--enable-automation` enables the **systemd user** unit only (not sudoers / system-wide).
 
 **1. Brave** — open `brave://extensions` → Developer mode → Load unpacked → `browser-extension/`. Confirm the ID matches `browser-extension/extension-id.txt`. Fully quit and relaunch Brave, then run `browser-tabs-host cli list --browser brave`.
+
+**1b. Chrome** — open `chrome://extensions` → Developer mode → Load unpacked → same `browser-extension/` folder (same ID). Fully quit and relaunch Chrome, then `browser-tabs-host cli list --browser chrome`.
 
 **2. Shell** — Wayland needs a logout after enable (and after Shell metadata name/url changes):
 
@@ -46,9 +48,9 @@ gnome-extensions enable browser-tab-dock@alkitect
 # log out and back in
 ```
 
-**3. Try it** — open one Brave window with at least two tabs. Hover the Brave dock icon briefly; click a card to activate that tab. Clicking the icon itself still minimize-or-previews.
+**3. Try it** — open one Brave **or** Chrome window with at least two tabs. Hover that browser’s dock icon briefly; click a card to activate that tab. Clicking the icon itself still minimize-or-previews.
 
-**Needs:** Ubuntu GNOME Wayland, Brave `.deb`, `systemd --user`, and a session where you can enable GNOME Shell extensions.
+**Needs:** Ubuntu GNOME Wayland, Brave and/or Chrome `.deb`, `systemd --user`, and a session where you can enable GNOME Shell extensions.
 
 ## Check it works
 
@@ -102,8 +104,8 @@ Versions: MV3 `browser-extension/manifest.json` (git tags track this) · Shell `
 
 ## Limits & safety
 
-- **Linux + Ubuntu Dock + Brave `.deb` only at this tag** — other OSes, docks, and browsers are unsupported until their roadmap wave ships.
-- **One Brave window** with ≥2 tabs for peek; several Brave windows → no tab strip (stock window previews still work).
+- **Linux + Ubuntu Dock + Brave/Chrome `.deb` only at this tag** — other OSes, docks, and browsers are unsupported until their roadmap wave ships.
+- **One window per browser** with ≥2 tabs for peek; several windows of the same browser → no tab strip (stock window previews still work).
 - **Thumbnails are page screenshots** (more sensitive than titles). Same-UID processes on D-Bus or the host socket can read them — details in [SECURITY.md](docs/SECURITY.md).
 - Hover dwell and host rate limits reduce spam while scrubbing past the icon.
 - This GitHub repo is the **release source** for tagged releases and public docs — see [CONTRIBUTING.md](CONTRIBUTING.md).

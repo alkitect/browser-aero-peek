@@ -84,18 +84,18 @@ grep -qF 'EXT_ID_PLACEHOLDER' "${tmpl}" \
 # Version triad: First public tag stays v0.2.9; current release must match MV3 + CHANGELOG
 grep -qF 'First public tag: v0.2.9' docs/PUBLISH.md \
   || { echo "ci-check: docs/PUBLISH.md must record First public tag: v0.2.9" >&2; exit 1; }
-grep -qF 'Current tag: v0.2.10' docs/PUBLISH.md \
-  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.2.10" >&2; exit 1; }
+grep -qF 'Current tag: v0.3.0' docs/PUBLISH.md \
+  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.3.0" >&2; exit 1; }
 python3 - <<'PY'
 import json, sys
 from pathlib import Path
 v = json.loads(Path("browser-extension/manifest.json").read_text())["version"]
-if v != "0.2.10":
-    print(f"ci-check: MV3 version {v!r} != 0.2.10", file=sys.stderr)
+if v != "0.3.0":
+    print(f"ci-check: MV3 version {v!r} != 0.3.0", file=sys.stderr)
     sys.exit(1)
 PY
-grep -qE '^## 0\.2\.10' CHANGELOG.md \
-  || { echo "ci-check: CHANGELOG missing ## 0.2.10" >&2; exit 1; }
+grep -qE '^## 0\.3\.0' CHANGELOG.md \
+  || { echo "ci-check: CHANGELOG missing ## 0.3.0" >&2; exit 1; }
 
 # Absolute home paths (any username) must not appear in shipped sources.
 # Encoded so this script does not embed a concrete account name.
@@ -133,7 +133,7 @@ fi
 [[ -f config/browsers.json ]] || { echo "ci-check: missing config/browsers.json" >&2; exit 1; }
 [[ -f docs/BROWSER-SUPPORT.md ]] || { echo "ci-check: missing docs/BROWSER-SUPPORT.md" >&2; exit 1; }
 
-# Registry SSOT: schema, relative nm_path, Brave-only enabled, unknown-key fail in host loader.
+# Registry SSOT: schema, relative nm_path, Brave+Chrome enabled, unknown-key fail in host loader.
 python3 - <<'PY'
 import json, sys
 from pathlib import Path
@@ -168,8 +168,8 @@ for e in browsers:
         sys.exit(1)
     if e.get("enabled"):
         enabled.append(bid)
-if enabled != ["brave"]:
-    print(f"ci-check: enabled browsers must be exactly ['brave'], got {enabled!r}", file=sys.stderr)
+if enabled != ["brave", "chrome"]:
+    print(f"ci-check: enabled browsers must be exactly ['brave', 'chrome'], got {enabled!r}", file=sys.stderr)
     sys.exit(1)
 print("ci-check: browsers.json OK")
 PY

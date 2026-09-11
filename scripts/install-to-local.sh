@@ -87,10 +87,18 @@ for entry in data["browsers"]:
         continue
     nm_dir = cfg_home / nm_path
     nm_dir.mkdir(parents=True, exist_ok=True)
-    mode = oct(nm_dir.stat().st_mode)[-3:]
-    if int(mode, 8) & 0o022:
-        print(f"Refusing install: {nm_dir} is group/world-writable (mode {mode})", file=sys.stderr)
-        sys.exit(1)
+    mode = nm_dir.stat().st_mode
+    if mode & 0o022:
+        # Chromium profile dirs are often group-writable; drop write bits when we own the path.
+        try:
+            nm_dir.chmod(0o755)
+        except OSError as e:
+            print(f"Refusing install: {nm_dir} is group/world-writable and chmod failed ({e})", file=sys.stderr)
+            sys.exit(1)
+        mode = nm_dir.stat().st_mode
+        if mode & 0o022:
+            print(f"Refusing install: {nm_dir} is still group/world-writable after chmod", file=sys.stderr)
+            sys.exit(1)
     out = dict(tmpl)
     out["path"] = bin_nm
     out["allowed_origins"] = [f"chrome-extension://{ext_id}/"]
@@ -129,16 +137,17 @@ elif [[ -n "${ALKITECT_CI_TMP:-}" ]]; then
 fi
 
 echo
-echo "Next (Brave — only enabled browser at shared-prep):"
-echo "  1. brave://extensions → Developer mode → Load unpacked:"
-echo "       ${ROOT}/browser-extension"
-echo "  2. Confirm extension ID is ${EXT_ID}"
-echo "  3. Fully quit and relaunch Brave"
-echo "  4. browser-tabs-host cli status && browser-tabs-host cli list --browser brave"
+echo "Next (enabled browsers — Brave + Chrome):"
+echo "  Brave: brave://extensions → Load unpacked → ${ROOT}/browser-extension"
+echo "  Chrome: chrome://extensions → Load unpacked → same folder (same extension ID ${EXT_ID})"
+echo "  Confirm ID is ${EXT_ID}; fully quit and relaunch each browser"
+echo "  browser-tabs-host cli status"
+echo "  browser-tabs-host cli list --browser brave"
+echo "  browser-tabs-host cli list --browser chrome"
 echo
 echo "Next (Shell hover peek — Wayland needs logout/in):"
 echo "  gnome-extensions enable ${EXT_UUID}"
 echo "  then log out and back in"
-echo "  Hover Brave dock icon (1 window, ≥2 tabs) → tab list"
+echo "  Hover Brave or Chrome dock icon (1 window, ≥2 tabs) → tab list"
 echo "  Click icon → still minimize-or-previews (unchanged)"
 echo "  ./scripts/verify-e2e.sh   # human checklist"
