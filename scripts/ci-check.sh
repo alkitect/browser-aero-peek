@@ -81,19 +81,21 @@ fi
 grep -qF 'EXT_ID_PLACEHOLDER' "${tmpl}" \
   || { echo "ci-check: NM template missing EXT_ID_PLACEHOLDER" >&2; exit 1; }
 
-# Version triad: PUBLISH + MV3 + CHANGELOG (derived first tag for this product)
+# Version triad: First public tag stays v0.2.9; current release must match MV3 + CHANGELOG
 grep -qF 'First public tag: v0.2.9' docs/PUBLISH.md \
   || { echo "ci-check: docs/PUBLISH.md must record First public tag: v0.2.9" >&2; exit 1; }
+grep -qF 'Current tag: v0.2.10' docs/PUBLISH.md \
+  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.2.10" >&2; exit 1; }
 python3 - <<'PY'
 import json, sys
 from pathlib import Path
 v = json.loads(Path("browser-extension/manifest.json").read_text())["version"]
-if v != "0.2.9":
-    print(f"ci-check: MV3 version {v!r} != 0.2.9", file=sys.stderr)
+if v != "0.2.10":
+    print(f"ci-check: MV3 version {v!r} != 0.2.10", file=sys.stderr)
     sys.exit(1)
 PY
-grep -qE '^## 0\.2\.9' CHANGELOG.md \
-  || { echo "ci-check: CHANGELOG missing ## 0.2.9" >&2; exit 1; }
+grep -qE '^## 0\.2\.10' CHANGELOG.md \
+  || { echo "ci-check: CHANGELOG missing ## 0.2.10" >&2; exit 1; }
 
 # Absolute home paths (any username) must not appear in shipped sources.
 # Encoded so this script does not embed a concrete account name.
@@ -128,11 +130,55 @@ else
   done
 fi
 
+[[ -f config/browsers.json ]] || { echo "ci-check: missing config/browsers.json" >&2; exit 1; }
+[[ -f docs/BROWSER-SUPPORT.md ]] || { echo "ci-check: missing docs/BROWSER-SUPPORT.md" >&2; exit 1; }
+
+# Registry SSOT: schema, relative nm_path, Brave-only enabled, unknown-key fail in host loader.
+python3 - <<'PY'
+import json, sys
+from pathlib import Path
+ALLOWED = {"chromium", "mozilla"}
+ALLOWED_KEYS = {"id", "enabled", "nm_schema", "nm_path", "desktop_ids", "wm_classes"}
+data = json.loads(Path("config/browsers.json").read_text())
+browsers = data.get("browsers")
+if not isinstance(browsers, list) or not browsers:
+    print("ci-check: browsers.json empty", file=sys.stderr)
+    sys.exit(1)
+enabled = []
+for e in browsers:
+    unknown = set(e) - ALLOWED_KEYS
+    if unknown:
+        print(f"ci-check: unknown keys {sorted(unknown)}", file=sys.stderr)
+        sys.exit(1)
+    bid = e.get("id")
+    schema = e.get("nm_schema")
+    nm_path = e.get("nm_path") or ""
+    if schema not in ALLOWED:
+        print(f"ci-check: bad nm_schema {schema!r} for {bid}", file=sys.stderr)
+        sys.exit(1)
+    if nm_path.startswith("/") or nm_path.startswith("~") or ".." in Path(nm_path).parts:
+        print(f"ci-check: nm_path must be profile-relative ({bid})", file=sys.stderr)
+        sys.exit(1)
+    # Wrong-schema negative: chromium must not use mozilla path shape.
+    if schema == "chromium" and "native-messaging-hosts" in nm_path.replace("\\", "/"):
+        print(f"ci-check: chromium entry {bid} must not use mozilla nm_path shape", file=sys.stderr)
+        sys.exit(1)
+    if schema == "mozilla" and nm_path.rstrip("/").endswith("NativeMessagingHosts"):
+        print(f"ci-check: mozilla entry {bid} must not use Chromium NativeMessagingHosts path", file=sys.stderr)
+        sys.exit(1)
+    if e.get("enabled"):
+        enabled.append(bid)
+if enabled != ["brave"]:
+    print(f"ci-check: enabled browsers must be exactly ['brave'], got {enabled!r}", file=sys.stderr)
+    sys.exit(1)
+print("ci-check: browsers.json OK")
+PY
+
 find scripts -type f -name '*.sh' -print0 | xargs -0 -r bash -n
 python3 -m py_compile host/browser_tabs_host.py
 
-# Source-only shell-fake (before install)
-./scripts/verify-shell-fake.sh
+# Source-only shell-fake (before install; ignore stale real-HOME install)
+./scripts/verify-shell-fake.sh --source-only
 
 tmp="$(mktemp -d)"
 cleanup() { rm -rf "${tmp}"; }
@@ -143,48 +189,87 @@ export XDG_STATE_HOME="${tmp}/.local/state"
 export XDG_RUNTIME_DIR="${tmp}/run"
 mkdir -p "${XDG_CONFIG_HOME}" "${XDG_STATE_HOME}" "${XDG_RUNTIME_DIR}" \
   "${tmp}/.local/bin" \
-  "${tmp}/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts" \
   "${tmp}/.local/share/gnome-shell/extensions" \
   "${tmp}/.config/systemd/user"
+# Pre-create parent dirs for ALL registry nm_paths (enabled + disabled) so absence asserts are meaningful.
+python3 - <<'PY'
+import json, os, stat
+from pathlib import Path
+cfg = Path(os.environ["XDG_CONFIG_HOME"])
+data = json.loads(Path("config/browsers.json").read_text())
+for e in data["browsers"]:
+    d = cfg / e["nm_path"]
+    d.mkdir(parents=True, exist_ok=True)
+# Ensure no group/world-write under config (install refuses 022).
+for dirpath, dirnames, _filenames in os.walk(cfg):
+    mode = os.stat(dirpath).st_mode
+    if mode & (stat.S_IWGRP | stat.S_IWOTH):
+        os.chmod(dirpath, 0o755)
+PY
 chmod 755 "${tmp}" "${tmp}/.local" "${tmp}/.local/bin" "${tmp}/.config" \
-  "${tmp}/.config/BraveSoftware" "${tmp}/.config/BraveSoftware/Brave-Browser" \
-  "${tmp}/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts" \
   "${tmp}/.local/share" "${tmp}/.local/share/gnome-shell" \
   "${tmp}/.local/share/gnome-shell/extensions" \
   "${tmp}/.config/systemd" "${tmp}/.config/systemd/user" \
   "${XDG_CONFIG_HOME}" "${XDG_STATE_HOME}"
 chmod 700 "${XDG_RUNTIME_DIR}"
 export ALKITECT_CI_TMP=1
+export PATH="${tmp}/.local/bin:${PATH}"
 
 "${ROOT}/scripts/install-to-local.sh"
 test -x "${tmp}/.local/bin/browser-tabs-host"
-test -f "${tmp}/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/org.alkitect.browser_tabs.json"
+test -f "${tmp}/.config/alkitect-browser-tabs/browsers.json"
 test -f "${tmp}/.local/share/gnome-shell/extensions/browser-tab-dock@alkitect/extension.js"
 test -f "${tmp}/.config/systemd/user/alkitect-browser-tabs.service"
 
 # Installed path must satisfy shell-fake greps
 ./scripts/verify-shell-fake.sh
 
-# NM JSON: exactly one chrome-extension origin matching extension-id.txt
+# Multi-NM: enabled positive (single origin) + disabled absent after install
 python3 - <<'PY'
-import json, sys
+import json, os, sys
 from pathlib import Path
-import os
 ext = Path("browser-extension/extension-id.txt").read_text().strip()
-nm = Path(os.environ["XDG_CONFIG_HOME"]) / "BraveSoftware/Brave-Browser/NativeMessagingHosts/org.alkitect.browser_tabs.json"
-data = json.loads(nm.read_text())
-origins = data.get("allowed_origins") or []
-if origins != [f"chrome-extension://{ext}/"]:
-    print(f"ci-check: allowed_origins {origins!r} != single id {ext}", file=sys.stderr)
-    sys.exit(1)
+cfg = Path(os.environ["XDG_CONFIG_HOME"])
+data = json.loads(Path("config/browsers.json").read_text())
+for e in data["browsers"]:
+    dest = cfg / e["nm_path"] / "org.alkitect.browser_tabs.json"
+    if e.get("enabled"):
+        if not dest.is_file():
+            print(f"ci-check: missing NM for enabled {e['id']}: {dest}", file=sys.stderr)
+            sys.exit(1)
+        nm = json.loads(dest.read_text())
+        origins = nm.get("allowed_origins") or []
+        if origins != [f"chrome-extension://{ext}/"]:
+            print(f"ci-check: allowed_origins {origins!r} != single id {ext}", file=sys.stderr)
+            sys.exit(1)
+        if any("*" in o for o in origins):
+            print("ci-check: wildcard origin forbidden", file=sys.stderr)
+            sys.exit(1)
+    else:
+        if dest.exists():
+            print(f"ci-check: disabled browser {e['id']} must not have NM JSON after install: {dest}", file=sys.stderr)
+            sys.exit(1)
+print("ci-check: multi-NM enabled/disabled OK")
 PY
 
-# Host CLI needs system python3-gi + a free bus name; packaging gate is install layout + shell-fake.
-echo 'ci-check: INFO skip verify-host-cli'
+# Host CLI multiplex + foreign-Activate (requires python3-gi)
+./scripts/verify-host-cli.sh
 
 "${ROOT}/scripts/uninstall-from-local.sh"
 test ! -e "${tmp}/.local/bin/browser-tabs-host"
-test ! -e "${tmp}/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/org.alkitect.browser_tabs.json"
+test ! -e "${tmp}/.config/alkitect-browser-tabs/browsers.json"
 test ! -e "${tmp}/.local/share/gnome-shell/extensions/browser-tab-dock@alkitect"
+python3 - <<'PY'
+import json, os, sys
+from pathlib import Path
+cfg = Path(os.environ["XDG_CONFIG_HOME"])
+data = json.loads(Path("config/browsers.json").read_text())
+for e in data["browsers"]:
+    dest = cfg / e["nm_path"] / "org.alkitect.browser_tabs.json"
+    if dest.exists():
+        print(f"ci-check: NM left after uninstall: {dest}", file=sys.stderr)
+        sys.exit(1)
+print("ci-check: uninstall cleared all NM JSON")
+PY
 
 echo "ci-check: PASS"

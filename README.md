@@ -19,10 +19,12 @@ Dock **click** stays stock minimize-or-previews. Peek is hover-only.
 
 ## Who this is for
 
-- **In:** Ubuntu 22.04 + GNOME Shell 42 **Wayland**, Ubuntu Dock, and the **Brave `.deb`**
+See **[docs/BROWSER-SUPPORT.md](docs/BROWSER-SUPPORT.md)** for the full In / Planned / Out matrix and enabled/disabled NM semantics.
+
+- **In:** Ubuntu 22.04 + GNOME Shell 42 **Wayland**, Ubuntu Dock, and the **Brave `.deb`** (only `enabled` browser after shared-prep)
 - **In:** You keep several Brave tabs open and want to pick one from the dock without guessing
-- **Planned (not in this tag):** Chrome → Opera → Vivaldi → Chromium → Edge (Chromium MV3 wave); then Firefox; then Tor Browser (feasibility gate)
-- **Out:** GNOME Web (Epiphany); Flatpak or Snap Brave; non-GNOME desktops; replacing the global dock click-action
+- **Planned (not enabled yet):** Chrome → Opera → Vivaldi → Chromium → Edge; then Firefox; then Tor Browser (feasibility gate)
+- **Out:** GNOME Web (Epiphany); Flatpak or Snap browsers; non-GNOME desktops; replacing the global dock click-action
 
 ## Quick start
 
@@ -35,7 +37,7 @@ chmod +x scripts/*.sh
 
 **What you installed:** three pieces — a user daemon (`alkitect-browser-tabs.service`), Brave’s native-messaging hook, and Shell extension `browser-tab-dock@alkitect`. The host starts with your graphical session. You still load the Brave add-on and enable the Shell extension yourself. `--enable-automation` enables the **systemd user** unit only (not sudoers / system-wide).
 
-**1. Brave** — open `brave://extensions` → Developer mode → Load unpacked → `browser-extension/`. Confirm the ID matches `browser-extension/extension-id.txt`. Fully quit and relaunch Brave, then run `browser-tabs-host cli list`.
+**1. Brave** — open `brave://extensions` → Developer mode → Load unpacked → `browser-extension/`. Confirm the ID matches `browser-extension/extension-id.txt`. Fully quit and relaunch Brave, then run `browser-tabs-host cli list --browser brave`.
 
 **2. Shell** — Wayland needs a logout after enable (and after Shell metadata name/url changes):
 

@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
-# Phase 1: daemon + fake extension over Unix socket + D-Bus CLI (no Brave required).
+# Daemon + fake NM peers over Unix socket + D-Bus CLI (no browser required).
+# Exercises multiplex bind hello, scoped list/activate, foreign-Activate fail-closed.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOST="${ROOT}/host/browser_tabs_host.py"
+# Prefer distro python3 (PyGObject); conda envs often lack gi.
+PYTHON3="/usr/bin/python3"
+[[ -x "${PYTHON3}" ]] || PYTHON3="$(command -v python3)"
 export PATH="${HOME}/.local/bin:${PATH}"
 
 if [[ ! -x "${HOME}/.local/bin/browser-tabs-host" ]]; then
@@ -11,26 +15,48 @@ if [[ ! -x "${HOME}/.local/bin/browser-tabs-host" ]]; then
   exit 1
 fi
 
-python3 -m py_compile "${HOST}"
+"${PYTHON3}" -m py_compile "${HOST}"
+"${PYTHON3}" -c 'import gi' || {
+  echo "verify-host-cli: need PyGObject (python3-gi) on ${PYTHON3}" >&2
+  exit 1
+}
 
-# Prefer installed unit; fall back to foreground daemon for CI/tmp.
-STARTED_LOCAL=0
-if ! systemctl --user is-active --quiet alkitect-browser-tabs.service 2>/dev/null; then
-  python3 "${HOST}" daemon &
-  DAEMON_PID=$!
-  STARTED_LOCAL=1
-  cleanup() {
-    kill "${DAEMON_PID}" 2>/dev/null || true
-  }
-  trap cleanup EXIT
-  sleep 0.4
+# Test registry: two enabled chromium peers (shipped browsers.json keeps chrome disabled).
+TMP_REG="$(mktemp)"
+export ALKITECT_BROWSERS_JSON="${TMP_REG}"
+python3 - <<PY
+import json
+from pathlib import Path
+src = json.loads(Path("${ROOT}/config/browsers.json").read_text())
+for e in src["browsers"]:
+    e["enabled"] = e["id"] in ("brave", "chrome")
+Path("${TMP_REG}").write_text(json.dumps(src, indent=2) + "\n")
+PY
+
+# Must use a daemon that loads the override (not a live user unit with shipped JSON).
+STOPPED_UNIT=0
+if systemctl --user is-active --quiet alkitect-browser-tabs.service 2>/dev/null; then
+  echo "verify-host-cli: stopping alkitect-browser-tabs.service for registry override" >&2
+  systemctl --user stop alkitect-browser-tabs.service || true
+  STOPPED_UNIT=1
+  sleep 0.3
 fi
 
-# Fake extension: answer list/activate on the daemon socket
-python3 - <<'PY' &
-import json, os, socket, struct, time
+"${PYTHON3}" "${HOST}" daemon &
+DAEMON_PID=$!
+sleep 0.5
+
+start_fake_peer() {
+  local bid="$1"
+  local t1="$2"
+  local t2="$3"
+  local t3="$4"
+  # Do not capture via $() — bash waits for bg children in command substitution.
+  "${PYTHON3}" - "$bid" "$t1" "$t2" "$t3" <<'PY' >/dev/null 2>&1 &
+import json, os, socket, struct, sys, time
 from pathlib import Path
 
+browser_id, t1, t2, t3 = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
 sock_path = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / "alkitect-browser-tabs.sock"
 for _ in range(50):
     if sock_path.exists():
@@ -56,11 +82,13 @@ def write_msg(obj):
     payload = json.dumps(obj).encode()
     s.sendall(struct.pack("<I", len(payload)) + payload)
 
+write_msg({"type": "hello", "browserId": browser_id})
 tabs = [
-    {"id": 1, "title": "Alpha", "favIconUrl": ""},
-    {"id": 2, "title": "Beta", "favIconUrl": "https://example.com/f.ico"},
-    {"id": 3, "title": "Gamma", "favIconUrl": ""},
+    {"id": t1, "title": f"{browser_id}-A", "favIconUrl": ""},
+    {"id": t2, "title": f"{browser_id}-B", "favIconUrl": "https://example.com/f.ico"},
+    {"id": t3, "title": f"{browser_id}-C", "favIconUrl": ""},
 ]
+ids = {t1, t2, t3}
 while True:
     msg = read_msg()
     if msg is None:
@@ -69,42 +97,84 @@ while True:
     if t == "list":
         write_msg({"type": "list", "tabs": tabs})
     elif t == "activate":
-        write_msg({"type": "activate", "ok": msg.get("tabId") in (1, 2, 3)})
+        write_msg({"type": "activate", "ok": msg.get("tabId") in ids})
     elif t == "ping":
         write_msg({"type": "pong"})
     else:
         write_msg({"type": "error", "error": "unknown"})
 PY
-FAKE_PID=$!
+}
+
+start_fake_peer brave 1 2 3
+FAKE_BRAVE=$!
+start_fake_peer chrome 10 20 30
+FAKE_CHROME=$!
 
 cleanup_all() {
-  kill "${FAKE_PID}" 2>/dev/null || true
-  if [[ "${STARTED_LOCAL}" -eq 1 ]]; then
-    kill "${DAEMON_PID}" 2>/dev/null || true
+  kill "${FAKE_BRAVE}" "${FAKE_CHROME}" 2>/dev/null || true
+  kill "${DAEMON_PID}" 2>/dev/null || true
+  rm -f "${TMP_REG}"
+  if [[ "${STOPPED_UNIT}" -eq 1 ]]; then
+    systemctl --user start alkitect-browser-tabs.service 2>/dev/null || true
   fi
 }
 trap cleanup_all EXIT
-sleep 0.3
+sleep 0.5
 
 echo "=== status ==="
-browser-tabs-host cli status
-echo "=== list ==="
-OUT="$(browser-tabs-host cli list)"
+STATUS="$(browser-tabs-host cli status)"
+echo "${STATUS}"
+echo "${STATUS}" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert "brave" in d.get("peers",[]), d; assert "chrome" in d.get("peers",[]), d'
+
+echo "=== list brave ==="
+OUT="$(browser-tabs-host cli list --browser brave)"
 echo "${OUT}"
 OUT="${OUT}" python3 - <<'PY'
 import json, os
 tabs = json.loads(os.environ["OUT"])
 assert len(tabs) >= 3, tabs
-assert tabs[0]["title"] == "Alpha"
+assert tabs[0]["title"] == "brave-A"
 blob = json.dumps(tabs)
 assert "http://" not in blob and "https://example.com/page" not in blob
 assert tabs[1]["favicon"].startswith("https://")
-print("list OK")
+print("list brave OK")
 PY
 
-echo "=== activate 2 ==="
-browser-tabs-host cli activate 2
+echo "=== list chrome ==="
+OUT_C="$(browser-tabs-host cli list --browser chrome)"
+echo "${OUT_C}"
+echo "${OUT_C}" | python3 -c 'import json,sys; t=json.load(sys.stdin); assert t[0]["title"]=="chrome-A", t'
 
-echo "=== peer deny smoke (optional) ==="
-# Same UID always passes; document negative path in SECURITY later.
+echo "=== activate brave 2 ==="
+browser-tabs-host cli activate --browser brave 2
+
+echo "=== foreign Activate (chrome tab via brave key) ==="
+if browser-tabs-host cli activate --browser brave 10 2>/tmp/alkitect-foreign-act.err; then
+  echo "FAIL: expected foreign Activate to fail" >&2
+  exit 1
+fi
+grep -qiE 'ForeignTab|Failed|Invalid' /tmp/alkitect-foreign-act.err \
+  || { echo "FAIL: unexpected error text:"; cat /tmp/alkitect-foreign-act.err >&2; exit 1; }
+echo "foreign Activate rejected OK"
+
+echo "=== thumb prune scoped ==="
+HOST_PATH="${HOST}" "${PYTHON3}" - <<'PY'
+import importlib.util, os
+from pathlib import Path
+host = os.environ["HOST_PATH"]
+spec = importlib.util.spec_from_file_location("browser_tabs_host", host)
+mod = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+spec.loader.exec_module(mod)
+base = mod.thumb_cache_dir()
+(base / "brave").mkdir(parents=True, exist_ok=True)
+(base / "chrome").mkdir(parents=True, exist_ok=True)
+(base / "brave" / "tab-99.png").write_bytes(b"x")
+(base / "chrome" / "tab-99.png").write_bytes(b"x")
+assert mod.prune_thumb_files("brave", {1, 2, 3}) >= 1
+assert (base / "chrome" / "tab-99.png").is_file(), "chrome thumb must survive brave prune"
+(base / "chrome" / "tab-99.png").unlink()
+print("thumb prune scoped OK")
+PY
+
 echo "PASS verify-host-cli"

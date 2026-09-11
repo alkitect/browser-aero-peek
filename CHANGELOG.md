@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.2.10
+
+- Shared-prep: `config/browsers.json` SSOT; host multiplex + bind hello; D-Bus/CLI scoped by `--browser`; Shell table matcher; multi-NM ci (enabled positive / disabled absent); BROWSER-SUPPORT + concurrent-browser SECURITY/ADR notes.
+- Brave remains the only `enabled` browser; CLI: `browser-tabs-host cli list --browser brave`.
+
 ## 0.2.9
 
 - Product rename: multi-browser **release source** (`browser-aero-peek`); Brave `.deb` still the only supported runtime at this tag.

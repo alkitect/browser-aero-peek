@@ -40,13 +40,27 @@ const BrowserTabsIface = `
 <node>
   <interface name="${IFACE}">
     <method name="ListTabs">
+      <arg type="s" name="browser_id" direction="in"/>
       <arg type="s" name="tabs_json" direction="out"/>
     </method>
     <method name="Activate">
+      <arg type="s" name="browser_id" direction="in"/>
       <arg type="u" name="tab_id" direction="in"/>
     </method>
   </interface>
 </node>`;
+
+/**
+ * Table-driven dock matcher — keep in sync with config/browsers.json (enabled rows).
+ * ci-check greps each enabled registry id into this file.
+ */
+const BROWSER_MATCHERS = [
+    {
+        id: 'brave',
+        desktopIds: ['brave-browser.desktop', 'brave-browser'],
+        wmClasses: ['brave-browser'],
+    },
+];
 
 let _proxy = null;
 
@@ -98,13 +112,16 @@ function _truncateTitle(title, id) {
     return `${t.slice(0, TITLE_MAX - 1)}…`;
 }
 
-function _thumbCacheDir() {
-    return GLib.build_filenamev([GLib.get_user_runtime_dir(), 'alkitect-tab-dock']);
+function _thumbCacheDir(browserId) {
+    const parts = [GLib.get_user_runtime_dir(), 'alkitect-tab-dock'];
+    if (browserId)
+        parts.push(browserId);
+    return GLib.build_filenamev(parts);
 }
 
 /** Drop paint-cache files for closed tabs (keepIds = current ListTabs ids). */
-function _pruneThumbCache(keepIds) {
-    const dir = _thumbCacheDir();
+function _pruneThumbCache(browserId, keepIds) {
+    const dir = _thumbCacheDir(browserId);
     let enumerator;
     try {
         enumerator = Gio.File.new_for_path(dir).enumerate_children(
@@ -127,7 +144,7 @@ function _pruneThumbCache(keepIds) {
     }
 }
 
-function _writeThumbFile(dataUrl, tabId) {
+function _writeThumbFile(dataUrl, browserId, tabId) {
     const comma = dataUrl.indexOf(',');
     if (comma < 0 || !dataUrl.substring(5, comma).includes(';base64'))
         return null;
@@ -139,7 +156,7 @@ function _writeThumbFile(dataUrl, tabId) {
     }
     if (!raw || raw.length === 0 || raw.length > MAX_DATA_BYTES)
         return null;
-    const dir = _thumbCacheDir();
+    const dir = _thumbCacheDir(browserId);
     try {
         GLib.mkdir_with_parents(dir, 0o700);
     } catch (_e) { /* exists */ }
@@ -159,8 +176,8 @@ function _writeThumbFile(dataUrl, tabId) {
 }
 
 /** Widescreen PNG/JPEG → Clutter actor (CSS data: backgrounds do not paint in St). */
-function _thumbActorFromDataUrl(dataUrl, tabId) {
-    const path = _writeThumbFile(dataUrl, tabId);
+function _thumbActorFromDataUrl(dataUrl, browserId, tabId) {
+    const path = _writeThumbFile(dataUrl, browserId, tabId);
     if (!path)
         return null;
     try {
@@ -185,23 +202,33 @@ function _thumbActorFromDataUrl(dataUrl, tabId) {
     }
 }
 
-function _isBraveApp(app) {
+/** Match dock app → registry browser id (or null). */
+function _matchBrowserApp(app) {
     if (!app)
-        return false;
+        return null;
     const id = (app.get_id() || '').toLowerCase();
-    if (id === 'brave-browser.desktop' || id === 'brave-browser')
-        return true;
+    let wm = '';
     try {
         const info = app.get_app_info();
-        const wm = info && info.get_startup_wm_class();
-        if (wm && wm.toLowerCase() === 'brave-browser')
-            return true;
+        const raw = info && info.get_startup_wm_class();
+        if (raw)
+            wm = String(raw).toLowerCase();
     } catch (_e) { /* ignore */ }
-    return false;
+    for (const m of BROWSER_MATCHERS) {
+        for (const d of m.desktopIds) {
+            if (id === d.toLowerCase())
+                return m.id;
+        }
+        for (const w of m.wmClasses) {
+            if (wm === w.toLowerCase())
+                return m.id;
+        }
+    }
+    return null;
 }
 
 /** Include minimized windows (dock getInterestingWindows is fine, but be explicit). */
-function _braveWindows(appIcon) {
+function _browserWindows(appIcon) {
     if (!appIcon || !appIcon.app)
         return [];
     let windows = [];
@@ -394,9 +421,12 @@ class Extension {
         this._fadingStrip = null;
         this._pendingShowIcon = null;
         this._leaveBudgetEnd = 0;
-        this._listInFlight = false;
-        this._cacheTabs = null;
-        this._cacheAt = 0;
+        /** @type {Map<string, boolean>} */
+        this._listInFlight = new Map();
+        /** @type {Map<string, Array>} */
+        this._cacheTabs = new Map();
+        /** @type {Map<string, number>} */
+        this._cacheAt = new Map();
         this._warnedNoExt = false;
     }
 
@@ -460,7 +490,7 @@ class Extension {
                 continue;
             }
             for (const icon of icons) {
-                if (!icon || !icon.app || !_isBraveApp(icon.app))
+                if (!icon || !icon.app || !_matchBrowserApp(icon.app))
                     continue;
                 still.add(icon);
                 if (this._bindings.has(icon))
@@ -574,20 +604,22 @@ class Extension {
     }
 
     _policyOk(icon) {
-        if (!_isBraveApp(icon.app))
+        if (!_matchBrowserApp(icon.app))
             return false;
-        return _braveWindows(icon).length === 1;
+        return _browserWindows(icon).length === 1;
     }
 
     _prefetchList(icon) {
         if (!this._policyOk(icon))
             return;
-        if (this._listInFlight)
+        const browserId = _matchBrowserApp(icon.app);
+        if (!browserId || this._listInFlight.get(browserId))
             return;
         const now = GLib.get_monotonic_time() / 1000;
-        if (this._cacheTabs && (now - this._cacheAt) < CACHE_TTL_MS)
+        const cacheAt = this._cacheAt.get(browserId) || 0;
+        if (this._cacheTabs.has(browserId) && (now - cacheAt) < CACHE_TTL_MS)
             return;
-        this._startListTabs(icon);
+        this._startListTabs(icon, browserId);
     }
 
     _tryPeek(icon) {
@@ -595,11 +627,18 @@ class Extension {
             this._clearPendingShow();
             return;
         }
+        const browserId = _matchBrowserApp(icon.app);
+        if (!browserId) {
+            this._clearPendingShow();
+            return;
+        }
         const now = GLib.get_monotonic_time() / 1000;
-        if (this._cacheTabs && (now - this._cacheAt) < CACHE_TTL_MS) {
-            if (Array.isArray(this._cacheTabs) && this._cacheTabs.length >= 2) {
+        const cacheAt = this._cacheAt.get(browserId) || 0;
+        const cached = this._cacheTabs.get(browserId);
+        if (cached && (now - cacheAt) < CACHE_TTL_MS) {
+            if (Array.isArray(cached) && cached.length >= 2) {
                 this._pendingShowIcon = icon;
-                this._showPeekStrip(this._cacheTabs, icon);
+                this._showPeekStrip(cached, icon, browserId);
             } else {
                 this._clearPendingShow();
             }
@@ -607,36 +646,37 @@ class Extension {
         }
         // Dwell success: may show when ListTabs returns (or when in-flight completes).
         this._pendingShowIcon = icon;
-        if (this._listInFlight)
+        if (this._listInFlight.get(browserId))
             return;
-        this._startListTabs(icon);
+        this._startListTabs(icon, browserId);
     }
 
-    _startListTabs(icon) {
-        this._listInFlight = true;
+    _startListTabs(icon, browserId) {
+        this._listInFlight.set(browserId, true);
         let proxy;
         try {
             proxy = _getProxy();
         } catch (_e) {
-            this._listInFlight = false;
+            this._listInFlight.set(browserId, false);
             this._clearPendingShow();
             return;
         }
-        proxy.call('ListTabs', null, Gio.DBusCallFlags.NONE, 8000, null, (_p, res) => {
-            this._listInFlight = false;
+        proxy.call('ListTabs', new GLib.Variant('(s)', [browserId]),
+            Gio.DBusCallFlags.NONE, 8000, null, (_p, res) => {
+            this._listInFlight.set(browserId, false);
             try {
                 const variant = proxy.call_finish(res);
                 const [json] = variant.deep_unpack();
                 const tabs = JSON.parse(json);
-                this._cacheTabs = tabs;
-                this._cacheAt = GLib.get_monotonic_time() / 1000;
+                this._cacheTabs.set(browserId, tabs);
+                this._cacheAt.set(browserId, GLib.get_monotonic_time() / 1000);
                 if (!Array.isArray(tabs) || tabs.length < 2) {
                     this._clearPendingShow();
                     return;
                 }
                 // Prefetch alone never shows — only pending-show after dwell.
                 if (this._pendingShowIcon === icon && icon.hover)
-                    this._showPeekStrip(tabs, icon);
+                    this._showPeekStrip(tabs, icon, browserId);
             } catch (e) {
                 this._clearPendingShow();
                 const msg = String(e);
@@ -644,7 +684,7 @@ class Extension {
                 if (!this._warnedNoExt && msg.indexOf('NoExtension') !== -1) {
                     this._warnedNoExt = true;
                     Main.notify('Browser Tab Dock',
-                        'Brave extension not connected. Open Brave, reload Alkitect Tab Dock, then hover again.');
+                        'Browser extension not connected. Open the browser, reload Alkitect Tab Dock, then hover again.');
                 }
             }
         });
@@ -702,7 +742,7 @@ class Extension {
         }
     }
 
-    _makeCard(tab, onActivate) {
+    _makeCard(tab, browserId, onActivate) {
         const card = new St.Button({
             style_class: 'button',
             reactive: true,
@@ -756,7 +796,7 @@ class Extension {
         let painted = false;
         const thumbUrl = tab.thumb || '';
         if (thumbUrl.startsWith('data:image/')) {
-            const actor = _thumbActorFromDataUrl(thumbUrl, tab.id);
+            const actor = _thumbActorFromDataUrl(thumbUrl, browserId, tab.id);
             if (actor) {
                 frame.set_child(actor);
                 painted = true;
@@ -782,7 +822,7 @@ class Extension {
         return card;
     }
 
-    _showPeekStrip(tabs, anchorActor) {
+    _showPeekStrip(tabs, anchorActor, browserId) {
         // Never stack over a fading orphan.
         this._destroyPopup(true);
         this._pendingShowIcon = null;
@@ -793,7 +833,7 @@ class Extension {
             if (t && t.id != null)
                 keep.add(Number(t.id));
         }
-        _pruneThumbCache(keep);
+        _pruneThumbCache(browserId, keep);
 
         const strip = new St.BoxLayout({
             vertical: false,
@@ -806,8 +846,8 @@ class Extension {
         });
 
         for (const t of tabs) {
-            strip.add_child(this._makeCard(t, () => {
-                this._activateAndRaise(t.id, anchorActor);
+            strip.add_child(this._makeCard(t, browserId, () => {
+                this._activateAndRaise(browserId, t.id, anchorActor);
                 this._destroyPopup();
             }));
         }
@@ -851,7 +891,7 @@ class Extension {
         });
     }
 
-    _activateAndRaise(tabId, appIcon) {
+    _activateAndRaise(browserId, tabId, appIcon) {
         let proxy;
         try {
             proxy = _getProxy();
@@ -860,13 +900,13 @@ class Extension {
             return;
         }
         try {
-            proxy.call_sync('Activate', new GLib.Variant('(u)', [tabId]),
+            proxy.call_sync('Activate', new GLib.Variant('(su)', [browserId, tabId]),
                 Gio.DBusCallFlags.NONE, 3000, null);
         } catch (e) {
             Main.notifyError('Browser Tab Dock', String(e));
             return;
         }
-        const windows = _braveWindows(appIcon);
+        const windows = _browserWindows(appIcon);
         if (windows.length === 1) {
             try {
                 Main.activateWindow(windows[0]);

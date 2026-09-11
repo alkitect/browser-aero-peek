@@ -286,6 +286,46 @@ function connect() {
   });
   connectAttempt = 0;
   console.info("NM connected", HOST);
+  // Mandatory bind hello — host rejects unbound peers (PREP-002).
+  try {
+    port.postMessage({ type: "hello", browserId: detectBrowserId() });
+  } catch (e) {
+    console.warn("hello failed", e);
+    port = null;
+    scheduleReconnect("hello failed");
+  }
+}
+
+/** Registry id for NM bind; Brave-first UA heuristics (shared MV3 blast radius). */
+function detectBrowserId() {
+  try {
+    if (navigator.brave && typeof navigator.brave.isBrave === "function") {
+      return "brave";
+    }
+  } catch (_) {
+    /* ignore */
+  }
+  const ua = navigator.userAgent || "";
+  if (/Edg\//.test(ua)) {
+    return "edge";
+  }
+  if (/OPR\//.test(ua) || /Opera\//.test(ua)) {
+    return "opera";
+  }
+  if (/Vivaldi\//.test(ua)) {
+    return "vivaldi";
+  }
+  if (/Brave[ /]/.test(ua) || /\bBrave\b/.test(ua)) {
+    return "brave";
+  }
+  if (/Chromium\//.test(ua)) {
+    return "chromium";
+  }
+  if (/Chrome\//.test(ua)) {
+    return "chrome";
+  }
+  // Fail closed to brave — only Brave is enabled in shared-prep registry.
+  return "brave";
 }
 
 function ensureConnected() {

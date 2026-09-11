@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Install browser-tabs host + NM manifest + systemd user unit.
+# Install browser-tabs host + NM manifest(s) + systemd user unit.
 # Usage: install-to-local.sh [--enable-automation]
-# Does not load the Brave extension (manual: brave://extensions → Load unpacked).
+# Writes NM only for enabled entries in config/browsers.json (never disabled nm_path).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN="${HOME}/.local/bin"
 SYSTEMD_USER="${XDG_CONFIG_HOME:-${HOME}/.config}/systemd/user"
-NM_DIR="${HOME}/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts"
+CFG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/alkitect-browser-tabs"
 EXT_ID_FILE="${ROOT}/browser-extension/extension-id.txt"
+BROWSERS_JSON="${ROOT}/config/browsers.json"
 ENABLE_AUTOMATION=0
 
 for arg in "$@"; do
@@ -29,12 +30,16 @@ if [[ ! -f "${EXT_ID_FILE}" ]]; then
   echo "Missing ${EXT_ID_FILE} (generate key first)" >&2
   exit 1
 fi
+if [[ ! -f "${BROWSERS_JSON}" ]]; then
+  echo "Missing ${BROWSERS_JSON}" >&2
+  exit 1
+fi
 EXT_ID="$(tr -d '[:space:]' <"${EXT_ID_FILE}")"
 
-mkdir -p "${BIN}" "${SYSTEMD_USER}" "${NM_DIR}"
+mkdir -p "${BIN}" "${SYSTEMD_USER}" "${CFG_DIR}"
 
-# Fail if install targets are group/world-writable (TODO-006)
-for d in "${BIN}" "${NM_DIR}" "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"; do
+# Fail if install targets are group/world-writable
+for d in "${BIN}" "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"; do
   [[ -d "$d" ]] || continue
   mode="$(stat -c '%a' "$d" 2>/dev/null || true)"
   if [[ -n "$mode" && "$((8#${mode} & 8#022))" -ne 0 ]]; then
@@ -44,6 +49,8 @@ for d in "${BIN}" "${NM_DIR}" "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"; do
 done
 
 install -m0755 "${ROOT}/host/browser_tabs_host.py" "${BIN}/browser-tabs-host"
+install -m0644 "${BROWSERS_JSON}" "${CFG_DIR}/browsers.json"
+
 # Chromium NM entry must take no required args
 cat >"${BIN}/browser-tabs-nm" <<EOF
 #!/usr/bin/env bash
@@ -51,18 +58,50 @@ exec "${BIN}/browser-tabs-host" native "\$@"
 EOF
 chmod 0755 "${BIN}/browser-tabs-nm"
 
-# NM manifest: absolute path, single allowed_origins id
-NM_JSON="${NM_DIR}/org.alkitect.browser_tabs.json"
+# NM manifests: only enabled chromium-schema browsers (mozilla reserved for later waves).
 python3 - <<PY
 import json
+import os
+import sys
 from pathlib import Path
-tmpl = Path("${ROOT}/native-messaging/org.alkitect.browser_tabs.json.template")
-data = json.loads(tmpl.read_text())
-data["path"] = str(Path("${BIN}/browser-tabs-nm").resolve())
-data["allowed_origins"] = [f"chrome-extension://${EXT_ID}/"]
-Path("${NM_JSON}").write_text(json.dumps(data, indent=2) + "\n")
-print("Wrote ${NM_JSON}")
-print("allowed_origins:", data["allowed_origins"])
+
+root = Path("${ROOT}")
+ext_id = "${EXT_ID}"
+bin_nm = str(Path("${BIN}/browser-tabs-nm").resolve())
+cfg_home = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config"))
+data = json.loads(Path("${BROWSERS_JSON}").read_text())
+tmpl = json.loads((root / "native-messaging/org.alkitect.browser_tabs.json.template").read_text())
+wrote = 0
+for entry in data["browsers"]:
+    bid = entry["id"]
+    schema = entry.get("nm_schema")
+    enabled = bool(entry.get("enabled"))
+    nm_path = entry.get("nm_path") or ""
+    if nm_path.startswith("/") or nm_path.startswith("~") or ".." in Path(nm_path).parts:
+        print(f"install: bad nm_path for {bid}", file=sys.stderr)
+        sys.exit(1)
+    if not enabled:
+        continue
+    if schema != "chromium":
+        print(f"install: skip enabled non-chromium {bid} (schema={schema})", file=sys.stderr)
+        continue
+    nm_dir = cfg_home / nm_path
+    nm_dir.mkdir(parents=True, exist_ok=True)
+    mode = oct(nm_dir.stat().st_mode)[-3:]
+    if int(mode, 8) & 0o022:
+        print(f"Refusing install: {nm_dir} is group/world-writable (mode {mode})", file=sys.stderr)
+        sys.exit(1)
+    out = dict(tmpl)
+    out["path"] = bin_nm
+    out["allowed_origins"] = [f"chrome-extension://{ext_id}/"]
+    dest = nm_dir / "org.alkitect.browser_tabs.json"
+    dest.write_text(json.dumps(out, indent=2) + "\n")
+    print(f"Wrote {dest}")
+    print("allowed_origins:", out["allowed_origins"])
+    wrote += 1
+if wrote < 1:
+    print("install: no enabled chromium browsers in registry", file=sys.stderr)
+    sys.exit(1)
 PY
 
 install -m0644 \
@@ -90,12 +129,12 @@ elif [[ -n "${ALKITECT_CI_TMP:-}" ]]; then
 fi
 
 echo
-echo "Next (Brave):"
+echo "Next (Brave — only enabled browser at shared-prep):"
 echo "  1. brave://extensions → Developer mode → Load unpacked:"
 echo "       ${ROOT}/browser-extension"
 echo "  2. Confirm extension ID is ${EXT_ID}"
 echo "  3. Fully quit and relaunch Brave"
-echo "  4. browser-tabs-host cli status && browser-tabs-host cli list"
+echo "  4. browser-tabs-host cli status && browser-tabs-host cli list --browser brave"
 echo
 echo "Next (Shell hover peek — Wayland needs logout/in):"
 echo "  gnome-extensions enable ${EXT_UUID}"

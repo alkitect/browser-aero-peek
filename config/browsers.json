@@ -1,0 +1,68 @@
+{
+  "browsers": [
+    {
+      "id": "brave",
+      "enabled": true,
+      "nm_schema": "chromium",
+      "nm_path": "BraveSoftware/Brave-Browser/NativeMessagingHosts",
+      "desktop_ids": ["brave-browser.desktop", "brave-browser"],
+      "wm_classes": ["brave-browser"]
+    },
+    {
+      "id": "chrome",
+      "enabled": false,
+      "nm_schema": "chromium",
+      "nm_path": "google-chrome/NativeMessagingHosts",
+      "desktop_ids": ["google-chrome.desktop", "google-chrome"],
+      "wm_classes": ["google-chrome", "Google-chrome"]
+    },
+    {
+      "id": "opera",
+      "enabled": false,
+      "nm_schema": "chromium",
+      "nm_path": "opera/NativeMessagingHosts",
+      "desktop_ids": ["opera.desktop", "opera"],
+      "wm_classes": ["opera"]
+    },
+    {
+      "id": "vivaldi",
+      "enabled": false,
+      "nm_schema": "chromium",
+      "nm_path": "vivaldi/NativeMessagingHosts",
+      "desktop_ids": ["vivaldi-stable.desktop", "vivaldi-stable"],
+      "wm_classes": ["vivaldi-stable", "Vivaldi-stable"]
+    },
+    {
+      "id": "chromium",
+      "enabled": false,
+      "nm_schema": "chromium",
+      "nm_path": "chromium/NativeMessagingHosts",
+      "desktop_ids": ["chromium-browser.desktop", "chromium_chromium.desktop", "chromium.desktop"],
+      "wm_classes": ["chromium-browser", "Chromium-browser", "chromium"]
+    },
+    {
+      "id": "edge",
+      "enabled": false,
+      "nm_schema": "chromium",
+      "nm_path": "microsoft-edge/NativeMessagingHosts",
+      "desktop_ids": ["microsoft-edge.desktop", "microsoft-edge"],
+      "wm_classes": ["microsoft-edge", "Microsoft-edge"]
+    },
+    {
+      "id": "firefox",
+      "enabled": false,
+      "nm_schema": "mozilla",
+      "nm_path": "mozilla/native-messaging-hosts",
+      "desktop_ids": ["firefox.desktop", "firefox"],
+      "wm_classes": ["firefox", "Firefox"]
+    },
+    {
+      "id": "tor",
+      "enabled": false,
+      "nm_schema": "mozilla",
+      "nm_path": "tor-browser/native-messaging-hosts",
+      "desktop_ids": ["torbrowser.desktop", "tor-browser.desktop"],
+      "wm_classes": ["Tor Browser", "Navigator"]
+    }
+  ]
+}
