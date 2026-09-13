@@ -1,0 +1,9 @@
+{
+  "name": "org.alkitect.browser_tabs",
+  "description": "Browser Tabs host (GNOME dock tab peek). Author: alkitect.",
+  "path": "HOST_PATH_PLACEHOLDER",
+  "type": "stdio",
+  "allowed_extensions": [
+    "EXT_ID_PLACEHOLDER"
+  ]
+}

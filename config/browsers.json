@@ -2,6 +2,8 @@
   "browsers": [
     {
       "id": "brave",
+      "family": "brave",
+      "packaging": "deb",
       "enabled": true,
       "nm_schema": "chromium",
       "nm_base": "xdg_config",
@@ -10,13 +12,60 @@
       "wm_classes": ["brave-browser"]
     },
     {
+      "id": "brave-snap",
+      "family": "brave",
+      "packaging": "snap",
+      "enabled": true,
+      "nm_schema": "chromium",
+      "nm_base": "home",
+      "nm_path": "snap/brave/common/BraveSoftware/Brave-Browser/NativeMessagingHosts",
+      "desktop_ids": ["brave_brave.desktop", "brave_brave"],
+      "wm_classes": ["brave-browser", "Brave-browser"]
+    },
+    {
+      "id": "brave-flatpak",
+      "family": "brave",
+      "packaging": "flatpak",
+      "enabled": true,
+      "nm_schema": "chromium",
+      "nm_base": "home",
+      "nm_path": ".var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser/NativeMessagingHosts",
+      "desktop_ids": ["com.brave.Browser.desktop"],
+      "wm_classes": [],
+      "flatpak_id": "com.brave.Browser",
+      "flatpak_filesystem": [
+        "~/.local/bin:ro",
+        "~/.local/share/alkitect-browser-tabs:ro"
+      ],
+      "flatpak_talk_names": ["org.freedesktop.Flatpak"]
+    },
+    {
       "id": "chrome",
+      "family": "chrome",
+      "packaging": "deb",
       "enabled": true,
       "nm_schema": "chromium",
       "nm_base": "xdg_config",
       "nm_path": "google-chrome/NativeMessagingHosts",
       "desktop_ids": ["google-chrome.desktop", "google-chrome"],
       "wm_classes": ["google-chrome", "Google-chrome"]
+    },
+    {
+      "id": "chrome-flatpak",
+      "family": "chrome",
+      "packaging": "flatpak",
+      "enabled": true,
+      "nm_schema": "chromium",
+      "nm_base": "home",
+      "nm_path": ".var/app/com.google.Chrome/config/google-chrome/NativeMessagingHosts",
+      "desktop_ids": ["com.google.Chrome.desktop"],
+      "wm_classes": [],
+      "flatpak_id": "com.google.Chrome",
+      "flatpak_filesystem": [
+        "~/.local/bin:ro",
+        "~/.local/share/alkitect-browser-tabs:ro"
+      ],
+      "flatpak_talk_names": ["org.freedesktop.Flatpak"]
     },
     {
       "id": "opera",
@@ -50,13 +99,54 @@
       "flatpak_talk_names": ["org.freedesktop.Flatpak"]
     },
     {
+      "id": "opera-snap",
+      "family": "opera",
+      "packaging": "snap",
+      "enabled": true,
+      "nm_schema": "chromium",
+      "nm_base": "home",
+      "nm_path": "snap/opera/common/opera/NativeMessagingHosts",
+      "desktop_ids": ["opera_opera.desktop", "opera_opera"],
+      "wm_classes": ["opera", "Opera"]
+    },
+    {
       "id": "vivaldi",
+      "family": "vivaldi",
+      "packaging": "deb",
       "enabled": true,
       "nm_schema": "chromium",
       "nm_base": "xdg_config",
       "nm_path": "vivaldi/NativeMessagingHosts",
       "desktop_ids": ["vivaldi-stable.desktop", "vivaldi-stable"],
       "wm_classes": ["vivaldi-stable", "Vivaldi-stable"]
+    },
+    {
+      "id": "vivaldi-snap",
+      "family": "vivaldi",
+      "packaging": "snap",
+      "enabled": true,
+      "nm_schema": "chromium",
+      "nm_base": "home",
+      "nm_path": "snap/vivaldi/common/vivaldi/NativeMessagingHosts",
+      "desktop_ids": ["vivaldi_vivaldi.desktop", "vivaldi_vivaldi"],
+      "wm_classes": ["vivaldi-stable", "Vivaldi-stable"]
+    },
+    {
+      "id": "vivaldi-flatpak",
+      "family": "vivaldi",
+      "packaging": "flatpak",
+      "enabled": true,
+      "nm_schema": "chromium",
+      "nm_base": "home",
+      "nm_path": ".var/app/com.vivaldi.Vivaldi/config/vivaldi/NativeMessagingHosts",
+      "desktop_ids": ["com.vivaldi.Vivaldi.desktop"],
+      "wm_classes": [],
+      "flatpak_id": "com.vivaldi.Vivaldi",
+      "flatpak_filesystem": [
+        "~/.local/bin:ro",
+        "~/.local/share/alkitect-browser-tabs:ro"
+      ],
+      "flatpak_talk_names": ["org.freedesktop.Flatpak"]
     },
     {
       "id": "chromium",
@@ -73,8 +163,27 @@
       "wm_classes": ["chromium", "chromium-browser", "Chromium-browser"]
     },
     {
+      "id": "chromium-flatpak",
+      "family": "chromium",
+      "packaging": "flatpak",
+      "enabled": true,
+      "nm_schema": "chromium",
+      "nm_base": "home",
+      "nm_path": ".var/app/org.chromium.Chromium/config/chromium/NativeMessagingHosts",
+      "desktop_ids": ["org.chromium.Chromium.desktop"],
+      "wm_classes": [],
+      "flatpak_id": "org.chromium.Chromium",
+      "flatpak_filesystem": [
+        "~/.local/bin:ro",
+        "~/.local/share/alkitect-browser-tabs:ro"
+      ],
+      "flatpak_talk_names": ["org.freedesktop.Flatpak"]
+    },
+    {
       "id": "edge",
-      "enabled": false,
+      "family": "edge",
+      "packaging": "deb",
+      "enabled": true,
       "nm_schema": "chromium",
       "nm_base": "xdg_config",
       "nm_path": "microsoft-edge/NativeMessagingHosts",
@@ -82,13 +191,35 @@
       "wm_classes": ["microsoft-edge", "Microsoft-edge"]
     },
     {
+      "id": "edge-flatpak",
+      "family": "edge",
+      "packaging": "flatpak",
+      "enabled": true,
+      "nm_schema": "chromium",
+      "nm_base": "home",
+      "nm_path": ".var/app/com.microsoft.Edge/config/microsoft-edge/NativeMessagingHosts",
+      "desktop_ids": ["com.microsoft.Edge.desktop"],
+      "wm_classes": [],
+      "flatpak_id": "com.microsoft.Edge",
+      "flatpak_filesystem": [
+        "~/.local/bin:ro",
+        "~/.local/share/alkitect-browser-tabs:ro"
+      ],
+      "flatpak_talk_names": ["org.freedesktop.Flatpak"]
+    },
+    {
       "id": "firefox",
-      "enabled": false,
+      "family": "firefox",
+      "packaging": "snap",
+      "enabled": true,
       "nm_schema": "mozilla",
-      "nm_base": "xdg_config",
-      "nm_path": "mozilla/native-messaging-hosts",
-      "desktop_ids": ["firefox.desktop", "firefox"],
-      "wm_classes": ["firefox", "Firefox"]
+      "nm_base": "home",
+      "nm_path": ".mozilla/native-messaging-hosts",
+      "nm_path_aliases": [
+        "snap/firefox/common/.mozilla/native-messaging-hosts"
+      ],
+      "desktop_ids": ["firefox_firefox.desktop", "firefox.desktop", "firefox"],
+      "wm_classes": ["firefox_firefox", "firefox", "Firefox"]
     },
     {
       "id": "tor",

@@ -21,9 +21,12 @@ fi
 rm -f "${SYSTEMD_USER}/alkitect-browser-tabs.service"
 rm -f "${BIN}/browser-tabs-host" "${BIN}/browser-tabs-nm" "${BIN}/browser-tabs-nm-flatpak"
 rm -rf "${CFG_DIR}"
-rm -rf "${SHARE_DIR}/mv3-opera-flatpak"
-rm -rf "${SHARE_DIR}/mv3-vivaldi"
-rm -rf "${SHARE_DIR}/mv3-chromium"
+# Staged forced-id MV3 copies (any packaging lane).
+rm -rf "${SHARE_DIR}"/mv3-*
+rm -rf "${HOME}/alkitect-browser-tabs/mv3-firefox"
+rm -f "${HOME}/alkitect-browser-tabs/mv3-firefox.xpi"
+rm -rf "${HOME}/snap/firefox/common/alkitect-mv3-firefox"
+rm -f "${HOME}/snap/firefox/common/alkitect-mv3-firefox.xpi"
 rm -f "${HOME}/bin/browser-tabs-nm-snap"
 rm -f "${HOME}/bin/browser-tabs-host"
 
@@ -60,5 +63,5 @@ if [[ -z "${ALKITECT_CI_TMP:-}" ]]; then
 fi
 rm -rf "${HOME}/.local/share/gnome-shell/extensions/browser-tab-dock@alkitect"
 echo "Uninstalled host / NM manifest(s) / systemd unit / shell extension files"
-echo "Note: Flatpak overrides left in place if set; reset with:"
+echo "Note: Flatpak overrides left in place if set; reset per flatpak_id, e.g.:"
 echo "  flatpak override --user --nofilesystem=~/.local/bin --nofilesystem=~/.local/share/alkitect-browser-tabs --no-talk-name=org.freedesktop.Flatpak com.opera.Opera"

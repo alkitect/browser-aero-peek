@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.7.0
+
+- Enable Firefox (Snap): mozilla NM (`allowed_extensions` = gecko id `browser-tab-dock@alkitect`); portal path `~/.mozilla/native-messaging-hosts` + snap-tree alias; Temporary Add-on **`.xpi`**; home sock + `browser-tabs-nm-snap`; staged forced `browserId=firefox`; profile `user.js` portal pref. Durable AMO-signed install deferred.
+- Batch packaging + Edge: enable Brave Snap/Flatpak, Chrome Flatpak, Opera Snap, Vivaldi Snap/Flatpak, Chromium Flatpak, Edge deb+Flatpak in registry; generalized staged `mv3-<id>`; Shell family matchers (metadata **18**→**19**).
+- Tor Browser: feasibility **FAIL** — stay `enabled: false` ([TOR-FEASIBILITY.md](docs/TOR-FEASIBILITY.md)).
+- Shell 19: sync GdkPixbuf thumb paint — no per-thumb TextureCache fade (strip fade only).
+- Docs: Temporary `.xpi` residual; Firefox `.deb`/Flatpak → later expansion.
 
 ## 0.6.1
 
@@ -36,15 +42,4 @@
 
 ## 0.2.9
 
-- Product rename: multi-browser **release source** (`browser-aero-peek`); Brave `.deb` still the only supported runtime at this tag.
-- README: Who-this-is-for matrix (In / Planned / Out) + Related dual-lane + Install clash with `brave-aero-peek`.
-- Support tip: stock desktop line (dock tip remains Brave-only lane).
-- Docs: PUBLISH V-001 count, tag-blocker matrix, browser backlog.
-
-## 0.2.8
-
-- Hover dwell peek strip on Ubuntu Dock for Brave (favicon + title above cached PNG thumbs).
-- MV3: inline favicons, `captureVisibleTab` thumb cache, native messaging bridge.
-- Host: session D-Bus + Unix socket; systemd `WantedBy=graphical-session.target`.
-- Shell metadata integer 9: soft dwell, leave corridor, card header, empty “No preview yet”.
-- First public extract scaffolding (GPL-3.0-only) under sibling product name.
+- First public tag of the multi-browser release-source fork (cutover from Brave-only lineage).

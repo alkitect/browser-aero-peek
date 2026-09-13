@@ -80,28 +80,54 @@ exec "${HOME_BIN}/browser-tabs-host" native "\$@"
 EOF
 chmod 0755 "${HOME_BIN}/browser-tabs-nm-snap"
 
-# Stage Flatpak-oriented MV3 copy with forced browser id (same extension-id / key).
-FLATPAK_EXT="${SHARE_DIR}/mv3-opera-flatpak"
-rm -rf "${FLATPAK_EXT}"
-mkdir -p "${FLATPAK_EXT}"
-cp -a "${ROOT}/browser-extension/." "${FLATPAK_EXT}/"
-printf '%s\n' 'var FORCED_BROWSER_ID = "opera-flatpak";' >"${FLATPAK_EXT}/forced-browser-id.js"
+# Stage MV3 copies with forced browserId for confined / ambiguous-UA lanes.
+# Native Brave/Chrome/Opera deb use shared browser-extension/ (no forced id).
+python3 - <<PY
+import json
+import shutil
+from pathlib import Path
 
-# Vivaldi: reduced UA often looks like Chrome in the SW — stage forced id (same key/id).
-VIVALDI_EXT="${SHARE_DIR}/mv3-vivaldi"
-rm -rf "${VIVALDI_EXT}"
-mkdir -p "${VIVALDI_EXT}"
-cp -a "${ROOT}/browser-extension/." "${VIVALDI_EXT}/"
-printf '%s\n' 'var FORCED_BROWSER_ID = "vivaldi";' >"${VIVALDI_EXT}/forced-browser-id.js"
+root = Path("${ROOT}")
+share = Path("${SHARE_DIR}")
+src = root / "browser-extension"
+data = json.loads(Path("${BROWSERS_JSON}").read_text())
 
-# Snap Chromium: same reduced-UA risk + confinement — stage forced id.
-CHROMIUM_EXT="${SHARE_DIR}/mv3-chromium"
-rm -rf "${CHROMIUM_EXT}"
-mkdir -p "${CHROMIUM_EXT}"
-cp -a "${ROOT}/browser-extension/." "${CHROMIUM_EXT}/"
-printf '%s\n' 'var FORCED_BROWSER_ID = "chromium";' >"${CHROMIUM_EXT}/forced-browser-id.js"
+def needs_stage(entry: dict) -> bool:
+    if not entry.get("enabled"):
+        return False
+    bid = entry["id"]
+    if entry.get("nm_schema") == "mozilla":
+        return True
+    if entry.get("packaging") in ("snap", "flatpak"):
+        return True
+    if bid in ("vivaldi", "edge"):
+        return True
+    return False
 
-# NM manifests: only enabled chromium-schema browsers (mozilla reserved for later waves).
+for entry in data["browsers"]:
+    if not needs_stage(entry):
+        continue
+    bid = entry["id"]
+    dest = share / f"mv3-{bid}"
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.mkdir(parents=True)
+    shutil.copytree(src, dest, dirs_exist_ok=True)
+    (dest / "forced-browser-id.js").write_text(f'var FORCED_BROWSER_ID = "{bid}";\n')
+    manifest_path = dest / "manifest.json"
+    m = json.loads(manifest_path.read_text())
+    if entry.get("nm_schema") == "mozilla":
+        # Firefox Snap: service_worker disabled; Chromium-only favicon rejected.
+        m["background"] = {"scripts": ["forced-browser-id.js", "background.js"]}
+        m.pop("key", None)
+        m["permissions"] = [p for p in (m.get("permissions") or []) if p != "favicon"]
+        manifest_path.write_text(json.dumps(m, indent=2) + "\n")
+        print(f"Staged {dest.name}: mozilla background.scripts + forced id")
+    else:
+        print(f"Staged {dest.name}: forced id (service_worker)")
+PY
+
+# NM manifests: enabled chromium + mozilla schema browsers.
 python3 - <<PY
 import json
 import os
@@ -110,13 +136,15 @@ from pathlib import Path
 
 root = Path("${ROOT}")
 ext_id = "${EXT_ID}"
+ff_id = (root / "browser-extension/firefox-extension-id.txt").read_text().strip()
 bin_nm = str(Path("${BIN}/browser-tabs-nm").resolve())
 bin_nm_flatpak = str(Path("${BIN}/browser-tabs-nm-flatpak").resolve())
 bin_nm_snap = str((Path.home() / "bin" / "browser-tabs-nm-snap").resolve())
 home = Path.home()
 cfg_home = Path(os.environ.get("XDG_CONFIG_HOME") or (home / ".config"))
 data = json.loads(Path("${BROWSERS_JSON}").read_text())
-tmpl = json.loads((root / "native-messaging/org.alkitect.browser_tabs.json.template").read_text())
+tmpl_chromium = json.loads((root / "native-messaging/org.alkitect.browser_tabs.json.template").read_text())
+tmpl_mozilla = json.loads((root / "native-messaging/org.alkitect.browser_tabs.mozilla.json.template").read_text())
 ALLOWED_KEYS = {
     "id", "enabled", "nm_schema", "nm_path", "nm_base", "nm_path_aliases",
     "desktop_ids", "wm_classes", "family", "packaging", "flatpak_id", "flatpak_filesystem",
@@ -145,9 +173,9 @@ def harden_dir(nm_dir: Path) -> None:
             print(f"Refusing install: {nm_dir} is still group/world-writable after chmod", file=sys.stderr)
             sys.exit(1)
 
-def write_nm(nm_dir: Path, path: str) -> None:
+def write_nm_chromium(nm_dir: Path, path: str) -> None:
     harden_dir(nm_dir)
-    out = dict(tmpl)
+    out = dict(tmpl_chromium)
     out["path"] = path
     out["allowed_origins"] = [f"chrome-extension://{ext_id}/"]
     dest = nm_dir / "org.alkitect.browser_tabs.json"
@@ -155,6 +183,19 @@ def write_nm(nm_dir: Path, path: str) -> None:
     print(f"Wrote {dest}")
     print("path:", out["path"])
     print("allowed_origins:", out["allowed_origins"])
+
+def write_nm_mozilla(nm_dir: Path, path: str) -> None:
+    harden_dir(nm_dir)
+    out = dict(tmpl_mozilla)
+    out["path"] = path
+    out["allowed_extensions"] = [ff_id]
+    if "allowed_origins" in out:
+        del out["allowed_origins"]
+    dest = nm_dir / "org.alkitect.browser_tabs.json"
+    dest.write_text(json.dumps(out, indent=2) + "\n")
+    print(f"Wrote {dest}")
+    print("path:", out["path"])
+    print("allowed_extensions:", out["allowed_extensions"])
 
 def nm_bin_for(entry) -> str:
     pkg = entry.get("packaging")
@@ -182,19 +223,80 @@ for entry in data["browsers"]:
             sys.exit(1)
     if not enabled:
         continue
-    if schema != "chromium":
-        print(f"install: skip enabled non-chromium {bid} (schema={schema})", file=sys.stderr)
+    if schema not in ("chromium", "mozilla"):
+        print(f"install: skip enabled unknown schema {bid} (schema={schema})", file=sys.stderr)
         continue
     nm_bin = nm_bin_for(entry)
-    write_nm(resolve_nm_dir(entry, nm_path), nm_bin)
-    for alias in entry.get("nm_path_aliases") or []:
-        write_nm(resolve_nm_dir(entry, alias), nm_bin)
+    if schema == "chromium":
+        write_nm_chromium(resolve_nm_dir(entry, nm_path), nm_bin)
+        for alias in entry.get("nm_path_aliases") or []:
+            write_nm_chromium(resolve_nm_dir(entry, alias), nm_bin)
+    else:
+        write_nm_mozilla(resolve_nm_dir(entry, nm_path), nm_bin)
+        for alias in entry.get("nm_path_aliases") or []:
+            write_nm_mozilla(resolve_nm_dir(entry, alias), nm_bin)
     wrote += 1
 
 if wrote < 1:
-    print("install: no enabled chromium browsers in registry", file=sys.stderr)
+    print("install: no enabled browsers in registry", file=sys.stderr)
     sys.exit(1)
 PY
+
+# Firefox Snap: XDG portal looks up NM under ~/.mozilla/… (not only ~/snap/firefox/…).
+# Grant webextensions permission for our host name (same store KeePassXC uses).
+if command -v flatpak >/dev/null 2>&1; then
+  if python3 - "${BROWSERS_JSON}" <<'PY'
+import json, sys
+from pathlib import Path
+data = json.loads(Path(sys.argv[1]).read_text())
+raise SystemExit(0 if any(e.get("id") == "firefox" and e.get("enabled") for e in data["browsers"]) else 1)
+PY
+  then
+    flatpak permission-set webextensions org.alkitect.browser_tabs snap.firefox yes 2>/dev/null \
+      && echo "flatpak permission-set webextensions org.alkitect.browser_tabs snap.firefox yes" \
+      || echo "install: warn — could not set webextensions portal permission for snap.firefox"
+  fi
+fi
+
+# Also stage Firefox MV3 under non-hidden paths + a single .xpi for Snap Temporary Add-on.
+# Snap document portal often exposes only the selected file — multi-file folder loads break
+# (manifest only, no background.js). Loading the .xpi avoids that.
+FIREFOX_SHARE="${HOME}/alkitect-browser-tabs/mv3-firefox"
+FIREFOX_XPI="${HOME}/alkitect-browser-tabs/mv3-firefox.xpi"
+FIREFOX_SNAP_DIR="${HOME}/snap/firefox/common/alkitect-mv3-firefox"
+FIREFOX_SNAP_XPI="${HOME}/snap/firefox/common/alkitect-mv3-firefox.xpi"
+if [[ -d "${SHARE_DIR}/mv3-firefox" ]]; then
+  rm -rf "${FIREFOX_SHARE}" "${FIREFOX_SNAP_DIR}"
+  mkdir -p "$(dirname "${FIREFOX_SHARE}")" "$(dirname "${FIREFOX_SNAP_DIR}")"
+  cp -a "${SHARE_DIR}/mv3-firefox" "${FIREFOX_SHARE}"
+  cp -a "${SHARE_DIR}/mv3-firefox" "${FIREFOX_SNAP_DIR}"
+  rm -f "${FIREFOX_XPI}" "${FIREFOX_SNAP_XPI}"
+  python3 - <<PY
+import zipfile
+from pathlib import Path
+src = Path("${FIREFOX_SHARE}")
+names = ["manifest.json", "forced-browser-id.js", "background.js"]
+for dest in (Path("${FIREFOX_XPI}"), Path("${FIREFOX_SNAP_XPI}")):
+    with zipfile.ZipFile(dest, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name in names:
+            zf.write(src / name, arcname=name)
+    print(f"Staged Firefox Temporary Add-on xpi: {dest}")
+PY
+  echo "Staged Snap-visible Firefox MV3 dir: ${FIREFOX_SNAP_DIR}"
+fi
+
+# Firefox Snap: force NM via XDG portal (bug 1930119 / KeePassXC). Pref applies on next Firefox start.
+FF_PROFILES="${HOME}/snap/firefox/common/.mozilla/firefox"
+if [[ -d "${FF_PROFILES}" ]]; then
+  while IFS= read -r -d '' prefs; do
+    prof="$(dirname "${prefs}")"
+    cat >"${prof}/user.js" <<'EOF'
+// browser-aero-peek: Snap native messaging via XDG desktop portal
+user_pref("widget.use-xdg-desktop-portal.native-messaging", 2);
+EOF
+    echo "Wrote ${prof}/user.js (portal native-messaging=2)"
+  done < <(find "${FF_PROFILES}" -mindepth 2 -maxdepth 2 -name prefs.js -print0 2>/dev/null)
+fi
 
 # Flatpak: host NM re-exec (talk-name) + staged MV3 path (documented in SECURITY.md).
 if command -v flatpak >/dev/null 2>&1; then
@@ -246,22 +348,43 @@ elif [[ -n "${ALKITECT_CI_TMP:-}" ]]; then
 fi
 
 echo
-echo "Next (enabled browsers — Brave + Chrome + Opera deb + Opera Flatpak + Vivaldi + Chromium Snap):"
-echo "  Brave:  brave://extensions  → Load unpacked → ${ROOT}/browser-extension"
-echo "  Chrome: chrome://extensions → Load unpacked → ${ROOT}/browser-extension"
-echo "  Opera (.deb): opera://extensions → Load unpacked → ${ROOT}/browser-extension"
-echo "  Opera (Flatpak): opera://extensions → Remove portal loads → Load unpacked → ${FLATPAK_EXT}"
-echo "       (forced hello browserId=opera-flatpak; NM via flatpak-spawn --host; same extension ID ${EXT_ID})"
-echo "  Vivaldi: vivaldi://extensions → Remove shared-folder load → Load unpacked → ${VIVALDI_EXT}"
-echo "       (forced hello browserId=vivaldi; same extension ID ${EXT_ID} — reduced UA looks like Chrome)"
-echo "  Chromium (Snap): chrome://extensions → Remove portal loads (/run/user/*/doc/…) → Load unpacked → ${CHROMIUM_EXT}"
-echo "       (forced hello browserId=chromium; NM via ~/bin/browser-tabs-nm-snap with absolute host/sock paths; same ID ${EXT_ID})"
-echo "  Confirm ID is ${EXT_ID}; fully quit and relaunch each browser"
-echo "  browser-tabs-host cli status"
-echo "  browser-tabs-host cli list --browser brave|chrome|opera|opera-flatpak|vivaldi|chromium"
+python3 - <<PY
+import json
+from pathlib import Path
+root = Path("${ROOT}")
+share = Path("${SHARE_DIR}")
+ext_id = "${EXT_ID}"
+data = json.loads(Path("${BROWSERS_JSON}").read_text())
+print("Next (enabled browsers — load MV3; Tor stays Out until TOR-FEASIBILITY PASS):")
+for e in data["browsers"]:
+    if not e.get("enabled"):
+        continue
+    bid = e["id"]
+    pkg = e.get("packaging", "native")
+    staged = share / f"mv3-{bid}"
+    if e.get("nm_schema") == "mozilla":
+        xpi = Path.home() / "snap/firefox/common/alkitect-mv3-firefox.xpi"
+        if not xpi.is_file():
+            xpi = Path.home() / "alkitect-browser-tabs" / "mv3-firefox.xpi"
+        print(f"  {bid} ({pkg}): about:debugging → Load Temporary Add-on → {xpi}")
+        print("       IMPORTANT: load the .xpi (not manifest.json). Snap portal often exposes only one file;")
+        print("       a folder/manifest pick yields Location /run/user/*/doc/… with no background.js.")
+        print(f"       gecko id browser-tab-dock@alkitect; forced browserId={bid}; portal NM ~/.mozilla")
+        print("       Temporary add-ons unload when Firefox quits — reload .xpi after every restart")
+        print("       Then: browser-tabs-host cli list --browser firefox  (must show tabs before hover works)")
+    elif staged.is_dir():
+        print(f"  {bid} ({pkg}): extensions → Load unpacked → {staged}")
+        print(f"       forced hello browserId={bid}; same Chromium extension ID {ext_id}")
+    else:
+        print(f"  {bid} ({pkg}): extensions → Load unpacked → {root / 'browser-extension'}")
+print(f"  Confirm Chromium-family ID is {ext_id}; fully quit and relaunch each browser")
+print("  browser-tabs-host cli status")
+ids = "|".join(e["id"] for e in data["browsers"] if e.get("enabled"))
+print(f"  browser-tabs-host cli list --browser {ids}")
+PY
 echo
-echo "Next (Shell hover peek — Wayland needs logout/in):"
+echo "Next (Shell hover peek — Wayland needs ONE logout/in after this install):"
 echo "  gnome-extensions enable ${EXT_UUID}"
-echo "  then log out and back in"
-echo "  Hover Brave / Chrome / Opera (.deb or Flatpak) / Vivaldi / Chromium dock icon (1 window, ≥2 tabs)"
+echo "  then log out and back in once"
+echo "  Hover each installed enabled browser dock icon (1 window, ≥2 tabs)"
 echo "  ./scripts/verify-e2e.sh   # human checklist"

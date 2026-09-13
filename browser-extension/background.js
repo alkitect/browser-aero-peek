@@ -357,6 +357,9 @@ function detectBrowserId() {
   if (/Brave[ /]/.test(ua) || /\bBrave\b/.test(ua)) {
     return "brave";
   }
+  if (/Firefox\//.test(ua)) {
+    return "firefox";
+  }
   if (/Chromium\//.test(ua)) {
     return "chromium";
   }

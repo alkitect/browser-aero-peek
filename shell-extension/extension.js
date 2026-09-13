@@ -52,24 +52,43 @@ const BrowserTabsIface = `
 
 /**
  * Table-driven dock matcher — keep in sync with config/browsers.json (enabled rows).
- * ci-check greps each enabled registry id into this file.
+ * Flatpak / snap rows before native when WM class overlaps. verify-shell-fake greps ids.
  */
 const BROWSER_MATCHERS = [
+    {
+        id: 'brave-flatpak',
+        desktopIds: ['com.brave.Browser.desktop'],
+        wmClasses: [],
+    },
+    {
+        id: 'brave-snap',
+        desktopIds: ['brave_brave.desktop', 'brave_brave'],
+        wmClasses: ['brave-browser', 'Brave-browser'],
+    },
     {
         id: 'brave',
         desktopIds: ['brave-browser.desktop', 'brave-browser'],
         wmClasses: ['brave-browser'],
     },
     {
+        id: 'chrome-flatpak',
+        desktopIds: ['com.google.Chrome.desktop'],
+        wmClasses: [],
+    },
+    {
         id: 'chrome',
         desktopIds: ['google-chrome.desktop', 'google-chrome'],
         wmClasses: ['google-chrome', 'Google-chrome'],
     },
-    // Flatpak before native Opera — desktop id is more specific; WM class overlaps.
     {
         id: 'opera-flatpak',
         desktopIds: ['com.opera.Opera.desktop'],
         wmClasses: [],
+    },
+    {
+        id: 'opera-snap',
+        desktopIds: ['opera_opera.desktop', 'opera_opera'],
+        wmClasses: ['opera', 'Opera'],
     },
     {
         id: 'opera',
@@ -77,14 +96,44 @@ const BROWSER_MATCHERS = [
         wmClasses: ['opera', 'Opera'],
     },
     {
+        id: 'vivaldi-flatpak',
+        desktopIds: ['com.vivaldi.Vivaldi.desktop'],
+        wmClasses: [],
+    },
+    {
+        id: 'vivaldi-snap',
+        desktopIds: ['vivaldi_vivaldi.desktop', 'vivaldi_vivaldi'],
+        wmClasses: ['vivaldi-stable', 'Vivaldi-stable'],
+    },
+    {
         id: 'vivaldi',
         desktopIds: ['vivaldi-stable.desktop', 'vivaldi-stable'],
         wmClasses: ['vivaldi-stable', 'Vivaldi-stable'],
     },
     {
+        id: 'chromium-flatpak',
+        desktopIds: ['org.chromium.Chromium.desktop'],
+        wmClasses: [],
+    },
+    {
         id: 'chromium',
         desktopIds: ['chromium_chromium.desktop', 'chromium-browser.desktop', 'chromium.desktop'],
         wmClasses: ['chromium', 'chromium-browser', 'Chromium-browser'],
+    },
+    {
+        id: 'edge-flatpak',
+        desktopIds: ['com.microsoft.Edge.desktop'],
+        wmClasses: [],
+    },
+    {
+        id: 'edge',
+        desktopIds: ['microsoft-edge.desktop', 'microsoft-edge'],
+        wmClasses: ['microsoft-edge', 'Microsoft-edge'],
+    },
+    {
+        id: 'firefox',
+        desktopIds: ['firefox_firefox.desktop', 'firefox.desktop', 'firefox'],
+        wmClasses: ['firefox_firefox', 'firefox', 'Firefox'],
     },
 ];
 
@@ -201,14 +250,45 @@ function _writeThumbFile(dataUrl, browserId, tabId) {
     return path;
 }
 
-/** Widescreen PNG/JPEG → Clutter actor (CSS data: backgrounds do not paint in St). */
+/** Widescreen PNG/JPEG → Clutter actor (CSS data: backgrounds do not paint in St).
+ * No per-thumb fade: paint sync so opacity comes only from the peek strip. */
 function _thumbActorFromDataUrl(dataUrl, browserId, tabId) {
     const path = _writeThumbFile(dataUrl, browserId, tabId);
     if (!path)
         return null;
+    const themeContext = St.ThemeContext.get_for_stage(global.stage);
+    const scale = themeContext.scale_factor || 1;
+    const wrap = new St.Bin({
+        reactive: false,
+        style: `width: ${THUMB_W}px; height: ${THUMB_H}px; border-radius: 6px;`,
+    });
     try {
-        const themeContext = St.ThemeContext.get_for_stage(global.stage);
-        const scale = themeContext.scale_factor || 1;
+        const GdkPixbuf = imports.gi.GdkPixbuf;
+        const Cogl = imports.gi.Cogl;
+        const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(
+            path, Math.round(THUMB_W * scale), Math.round(THUMB_H * scale));
+        const image = new Clutter.Image();
+        const format = pixbuf.get_has_alpha()
+            ? Cogl.PixelFormat.RGBA_8888
+            : Cogl.PixelFormat.RGB_888;
+        image.set_data(
+            pixbuf.get_pixels(),
+            format,
+            pixbuf.get_width(),
+            pixbuf.get_height(),
+            pixbuf.get_rowstride());
+        const actor = new St.Widget({
+            width: THUMB_W,
+            height: THUMB_H,
+            content: image,
+            reactive: false,
+        });
+        wrap.set_child(actor);
+        return wrap;
+    } catch (_syncErr) {
+        /* fall through — TextureCache without its own opacity ease */
+    }
+    try {
         const file = Gio.File.new_for_path(path);
         const tex = St.TextureCache.get_default().load_file_async(
             file,
@@ -217,10 +297,16 @@ function _thumbActorFromDataUrl(dataUrl, browserId, tabId) {
             scale,
             scale);
         tex.set_size(THUMB_W, THUMB_H);
-        const wrap = new St.Bin({
-            reactive: false,
-            style: `width: ${THUMB_W}px; height: ${THUMB_H}px; border-radius: 6px;`,
-        });
+        const cancelThumbFade = () => {
+            try {
+                tex.remove_all_transitions();
+            } catch (_e) { /* ignore */ }
+            if (tex.opacity !== 255)
+                tex.opacity = 255;
+        };
+        cancelThumbFade();
+        tex.connect('notify::opacity', cancelThumbFade);
+        tex.connect('notify::size', cancelThumbFade);
         wrap.set_child(tex);
         return wrap;
     } catch (_e) {
@@ -228,21 +314,66 @@ function _thumbActorFromDataUrl(dataUrl, browserId, tabId) {
     }
 }
 
-/** Opera .deb and Flatpak both ship StartupWMClass=Opera — disambiguate by desktop id / Exec. */
+function _appExecLower(app) {
+    try {
+        const info = app.get_app_info();
+        return ((info && info.get_executable()) || '').toLowerCase();
+    } catch (_e) {
+        return '';
+    }
+}
+
+/** Opera .deb / Snap / Flatpak share StartupWMClass=Opera — disambiguate by desktop id / Exec. */
 function _matchOperaFamily(app, id, wm) {
     if (id === 'com.opera.opera.desktop')
         return 'opera-flatpak';
+    if (id === 'opera_opera.desktop' || id === 'opera_opera')
+        return 'opera-snap';
     if (id === 'opera.desktop' || id === 'opera' || id === 'opera-browser.desktop')
         return 'opera';
-    let exec = '';
-    try {
-        const info = app.get_app_info();
-        exec = ((info && info.get_executable()) || '').toLowerCase();
-    } catch (_e) { /* ignore */ }
+    const exec = _appExecLower(app);
     if (exec.includes('flatpak') || id.startsWith('com.opera.'))
         return 'opera-flatpak';
+    if (exec.includes('/snap/') || exec.includes('snap/bin/opera') || id.includes('opera_opera'))
+        return 'opera-snap';
     if (wm === 'opera')
         return 'opera';
+    return null;
+}
+
+/** Brave Snap shares WM with .deb — prefer desktop id / Exec. */
+function _matchBraveFamily(app, id, wm) {
+    if (id === 'com.brave.browser.desktop')
+        return 'brave-flatpak';
+    if (id === 'brave_brave.desktop' || id === 'brave_brave')
+        return 'brave-snap';
+    if (id === 'brave-browser.desktop' || id === 'brave-browser')
+        return 'brave';
+    const exec = _appExecLower(app);
+    if (exec.includes('flatpak') || id.startsWith('com.brave.'))
+        return 'brave-flatpak';
+    if (exec.includes('/snap/') || id.includes('brave_brave'))
+        return 'brave-snap';
+    if (wm === 'brave-browser')
+        return 'brave';
+    return null;
+}
+
+/** Vivaldi Snap shares WM with .deb. */
+function _matchVivaldiFamily(app, id, wm) {
+    if (id === 'com.vivaldi.vivaldi.desktop')
+        return 'vivaldi-flatpak';
+    if (id === 'vivaldi_vivaldi.desktop' || id === 'vivaldi_vivaldi')
+        return 'vivaldi-snap';
+    if (id === 'vivaldi-stable.desktop' || id === 'vivaldi-stable')
+        return 'vivaldi';
+    const exec = _appExecLower(app);
+    if (exec.includes('flatpak') || id.startsWith('com.vivaldi.'))
+        return 'vivaldi-flatpak';
+    if (exec.includes('/snap/') || id.includes('vivaldi_vivaldi'))
+        return 'vivaldi-snap';
+    if (wm === 'vivaldi-stable')
+        return 'vivaldi';
     return null;
 }
 
@@ -258,14 +389,28 @@ function _matchBrowserApp(app) {
         if (raw)
             wm = String(raw).toLowerCase();
     } catch (_e) { /* ignore */ }
-    // Opera family first: shared WM class must not steal Flatpak ↔ deb.
     if (id.includes('opera') || wm === 'opera') {
         const operaId = _matchOperaFamily(app, id, wm);
         if (operaId)
             return operaId;
     }
+    if (id.includes('brave') || wm === 'brave-browser') {
+        const braveId = _matchBraveFamily(app, id, wm);
+        if (braveId)
+            return braveId;
+    }
+    if (id.includes('vivaldi') || wm === 'vivaldi-stable') {
+        const vivaldiId = _matchVivaldiFamily(app, id, wm);
+        if (vivaldiId)
+            return vivaldiId;
+    }
+    const skipFamily = {
+        opera: 1, 'opera-flatpak': 1, 'opera-snap': 1,
+        brave: 1, 'brave-flatpak': 1, 'brave-snap': 1,
+        vivaldi: 1, 'vivaldi-flatpak': 1, 'vivaldi-snap': 1,
+    };
     for (const m of BROWSER_MATCHERS) {
-        if (m.id === 'opera' || m.id === 'opera-flatpak')
+        if (skipFamily[m.id])
             continue;
         for (const d of m.desktopIds) {
             if (id === d.toLowerCase())
@@ -279,12 +424,18 @@ function _matchBrowserApp(app) {
     return null;
 }
 
-/** Sibling registry id when GNOME merges Opera deb+Flatpak under one StartupWMClass. */
-function _operaPeerFallback(browserId) {
-    if (browserId === 'opera')
-        return 'opera-flatpak';
-    if (browserId === 'opera-flatpak')
-        return 'opera';
+/** Sibling registry id when GNOME merges packaging variants under one StartupWMClass. */
+function _peerFallback(browserId) {
+    const families = {
+        opera: ['opera', 'opera-flatpak', 'opera-snap'],
+        brave: ['brave', 'brave-flatpak', 'brave-snap'],
+        vivaldi: ['vivaldi', 'vivaldi-flatpak', 'vivaldi-snap'],
+    };
+    for (const peers of Object.values(families)) {
+        const i = peers.indexOf(browserId);
+        if (i >= 0)
+            return peers[(i + 1) % peers.length];
+    }
     return null;
 }
 
@@ -740,7 +891,7 @@ class Extension {
                     this._showPeekStrip(tabs, icon, browserId);
             } catch (e) {
                 const msg = String(e);
-                const alt = !retried ? _operaPeerFallback(browserId) : null;
+                const alt = !retried ? _peerFallback(browserId) : null;
                 if (alt && msg.indexOf('NoExtension') !== -1 && !this._listInFlight.get(alt)) {
                     log(`${Me.metadata.uuid}: ListTabs ${browserId} NoExtension — retry ${alt}`);
                     this._startListTabs(icon, alt, true);

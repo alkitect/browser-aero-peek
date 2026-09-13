@@ -2,7 +2,7 @@
 
 ## Context
 
-On **Linux Ubuntu + GNOME Wayland**, show browser **tab titles, favicons, and cached thumbnails** when the user **hovers** a supported Ubuntu Dock icon (dwell), without changing global dock click-action. Enabled peers today: Brave, Chrome, Opera `.deb`, Opera Flatpak — via `config/browsers.json`.
+On **Linux Ubuntu + GNOME Wayland**, show browser **tab titles, favicons, and cached thumbnails** when the user **hovers** a supported Ubuntu Dock icon (dwell), without changing global dock click-action. Enabled peers today: Brave, Chrome, Opera `.deb`, Opera Flatpak, Vivaldi, Chromium Snap, Firefox Snap — via `config/browsers.json` (`nm_schema` chromium or mozilla).
 
 ## Containers
 

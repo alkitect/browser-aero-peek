@@ -645,16 +645,18 @@ def main(argv: Optional[list[str]] = None) -> int:
     if argv and argv[0] in ("-h", "--help"):
         print("Usage: browser-tabs-host daemon|native|cli ...", file=sys.stderr)
         return 2
-    # Chromium may launch the NM binary with no args (or chrome-extension:// origin).
-    if not argv or argv[0].startswith("chrome-extension://"):
+    # Chromium: no args or chrome-extension:// origin. Mozilla: argv[0]=extension-id (@…).
+    if not argv:
         return run_native()
     mode = argv[0]
-    if mode == "daemon":
-        return Daemon().run()
-    if mode == "native":
-        return run_native()
-    if mode == "cli":
+    if mode in ("daemon", "native", "cli"):
+        if mode == "daemon":
+            return Daemon().run()
+        if mode == "native":
+            return run_native()
         return run_cli(argv[1:])
+    if mode.startswith("chrome-extension://") or "@" in mode:
+        return run_native()
     print(f"unknown mode: {mode}", file=sys.stderr)
     return 2
 

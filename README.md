@@ -15,16 +15,16 @@ Thumbnails are screenshots from the last time that tab was visible — Chromium 
 
 Dock **click** stays stock minimize-or-previews. Peek is hover-only.
 
-**At this release, Brave, Google Chrome, Opera `.deb`, Opera Flatpak, Vivaldi `.deb`, and Chromium Snap are supported.** Other browsers stay on the roadmap — Chromium Flatpak deferred; other Flatpak/Snap products stay Out.
+**At this tip (Unreleased), the registry enables Chromium-family packaging variants (deb / Snap / Flatpak where listed), Microsoft Edge (deb + Flatpak), and Firefox Snap.** Tor Browser stays **Out** ([TOR-FEASIBILITY.md](docs/TOR-FEASIBILITY.md) FAIL). Live hover only works for packages you actually install.
 
 ## Who this is for
 
 See **[docs/BROWSER-SUPPORT.md](docs/BROWSER-SUPPORT.md)** for the full In / Planned / Out matrix and enabled/disabled NM semantics.
 
-- **In:** Ubuntu 22.04 + GNOME Shell 42 **Wayland**, Ubuntu Dock, and **Brave**, **Google Chrome**, **Opera** `.deb`, **Opera Flatpak** (`com.opera.Opera`), **Vivaldi** `.deb`, and/or **Chromium** (Snap)
-- **In:** You keep several tabs open and want to pick one from the dock without guessing
-- **Planned (not enabled yet):** Edge; then Firefox; then Tor Browser (feasibility gate); Chromium Flatpak (deferred)
-- **Out:** GNOME Web (Epiphany); Ubuntu transitional `chromium-browser` `.deb` (use Snap); other Flatpak/Snap browsers unless matched; Opera GX unless matched later; non-GNOME desktops; replacing the global dock click-action
+- **In (registry):** Brave / Chrome / Opera / Vivaldi / Chromium / Edge packaging rows in `config/browsers.json`; Firefox Snap
+- **In (this machine):** whatever of those packages you have installed — NM JSON is written for all enabled rows; Flatpak overrides apply only when the Flatpak app exists
+- **Out:** Tor Browser (feasibility FAIL); GNOME Web; Firefox `.deb`/Flatpak this wave; non-GNOME desktops
+- **Shell:** Ubuntu 22.04 + GNOME Shell 42 **Wayland**, Ubuntu Dock; **one** logout/in after Shell matcher changes
 
 ## Quick start
 
@@ -35,30 +35,30 @@ chmod +x scripts/*.sh
 ./scripts/install-to-local.sh --enable-automation
 ```
 
-**What you installed:** three pieces — a user daemon (`alkitect-browser-tabs.service`), native-messaging hooks for **each enabled** browser (Brave + Chrome + Opera deb + Opera Flatpak + Vivaldi + Chromium Snap), and Shell extension `browser-tab-dock@alkitect`. The host starts with your graphical session. You still load the add-on in each browser and enable the Shell extension yourself. `--enable-automation` enables the **systemd user** unit only (not sudoers / system-wide).
+**What you installed:** a user daemon (`alkitect-browser-tabs.service`), Native Messaging hooks for **each enabled** registry browser, staged MV3 folders under `~/.local/share/alkitect-browser-tabs/mv3-<id>/` where forced `browserId` is required, and Shell extension `browser-tab-dock@alkitect`. You still load the add-on in each browser and enable the Shell extension yourself.
 
-**1. Brave** — open `brave://extensions` → Developer mode → Load unpacked → `browser-extension/`. Confirm the ID matches `browser-extension/extension-id.txt`. Fully quit and relaunch Brave, then run `browser-tabs-host cli list --browser brave`.
+**Load the add-on (pick what you run):**
 
-**1b. Chrome** — open `chrome://extensions` → Developer mode → Load unpacked → same `browser-extension/` folder (same ID). Fully quit and relaunch Chrome, then `browser-tabs-host cli list --browser chrome`.
+| Browser | Extensions page | Load path |
+|---------|-----------------|-----------|
+| Brave / Chrome / Opera **deb** | `brave://` / `chrome://` / `opera://extensions` | repo `browser-extension/` |
+| Edge **deb** | `edge://extensions` | staged `~/.local/share/alkitect-browser-tabs/mv3-edge/` |
+| Vivaldi **deb** | `vivaldi://extensions` | staged `mv3-vivaldi/` (forced id — reduced UA looks like Chrome) |
+| Snap / Flatpak Chromium-family | that browser’s extensions page | staged `mv3-<id>/` (remove portal `/run/…/doc/…` loads) |
+| Firefox Snap | `about:debugging#/runtime/this-firefox` | Temporary Add-on → **`~/snap/firefox/common/alkitect-mv3-firefox.xpi`** (`.xpi` not `manifest.json`; reloads after Firefox quit until AMO-signed durable follow-up) |
 
-**1c. Opera (`.deb`)** — open `opera://extensions` → Developer mode → Load unpacked → same `browser-extension/` folder. Fully quit and relaunch Opera, then `browser-tabs-host cli list --browser opera`.
+Confirm Chromium-family ID matches `browser-extension/extension-id.txt`. Fully quit/relaunch each browser, then `browser-tabs-host cli list --browser <id>`.
 
-**1d. Opera (Flatpak)** — open `opera://extensions` in Flatpak Opera → **Remove** any copy still pointing at `/run/flatpak/doc/…` → Load unpacked → `~/.local/share/alkitect-browser-tabs/mv3-opera-flatpak/` (must be that path, not a portal temp). Quit/relaunch Flatpak Opera, then `browser-tabs-host cli list --browser opera-flatpak`.
-
-**1e. Vivaldi** — open `vivaldi://extensions` → **Remove** any load from the shared `browser-extension/` folder → Load unpacked → `~/.local/share/alkitect-browser-tabs/mv3-vivaldi/` (forced `browserId=vivaldi`; Vivaldi’s reduced UA otherwise binds as `chrome`). Fully quit and relaunch Vivaldi, then `browser-tabs-host cli list --browser vivaldi`.
-
-**1f. Chromium (Snap)** — open `chrome://extensions` in Snap Chromium → **Remove** any portal load (`/run/user/*/doc/…`) → Load unpacked → `~/.local/share/alkitect-browser-tabs/mv3-chromium/` (forced `browserId=chromium`). Fully quit and relaunch Chromium, then `browser-tabs-host cli list --browser chromium`.
-
-**2. Shell** — Wayland needs a logout after enable (and after Shell metadata / matcher changes):
+**Shell** — Wayland needs **one** logout after enable (and after Shell metadata / matcher changes):
 
 ```bash
 gnome-extensions enable browser-tab-dock@alkitect
-# log out and back in
+# log out and back in once
 ```
 
-**3. Try it** — open one Brave, Chrome, Opera (deb or Flatpak), Vivaldi, or Chromium window with at least two tabs. Hover that browser’s dock icon briefly; click a card to activate that tab. Clicking the icon itself still minimize-or-previews.
+**Try it** — one window per installed browser with ≥2 tabs; hover that dock icon; click a card. Dock click stays stock.
 
-**Needs:** Ubuntu GNOME Wayland, Brave and/or Chrome and/or Opera `.deb` and/or Opera Flatpak and/or Vivaldi `.deb` and/or Chromium Snap, `systemd --user`, and a session where you can enable GNOME Shell extensions.
+**Needs:** Ubuntu GNOME Wayland, at least one enabled browser package, `systemd --user`, and permission to enable GNOME Shell extensions.
 
 ## Check it works
 
@@ -112,7 +112,7 @@ Versions: MV3 `browser-extension/manifest.json` (git tags track this) · Shell `
 
 ## Limits & safety
 
-- **Linux + Ubuntu Dock + Brave/Chrome/Opera (`.deb` + Flatpak)/Vivaldi (`.deb`)/Chromium (Snap) at this tag** — other OSes, docks, and browsers stay unsupported until their roadmap wave ships.
+- **Linux + Ubuntu Dock + Brave/Chrome/Opera (`.deb` + Flatpak)/Vivaldi (`.deb`)/Chromium (Snap)/Firefox (Snap) at this tip** — other OSes, docks, and browsers stay unsupported until their roadmap wave ships.
 - **One window per browser** with ≥2 tabs for peek; several windows of the same browser → no tab strip (stock window previews still work).
 - **Thumbnails are page screenshots** (more sensitive than titles). Same-UID processes on D-Bus or the host socket can read them — details in [SECURITY.md](docs/SECURITY.md).
 - Hover dwell and host rate limits reduce spam while scrubbing past the icon.

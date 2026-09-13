@@ -25,7 +25,8 @@ grep -q 'notify::hover' "$SRC" || fail "source missing notify::hover"
 grep -q 'DWELL_MS' "$SRC" || fail "source missing DWELL_MS"
 grep -q 'DWELL_MS = 100' "$SRC" || fail "source DWELL_MS must be 100"
 grep -q '_showPeekStrip\|_makeCard' "$SRC" || fail "source missing peek strip"
-grep -q 'load_file_async\|TextureCache' "$SRC" || fail "source missing TextureCache thumb paint"
+grep -q 'GdkPixbuf\|load_file_async\|TextureCache\|Clutter.Image' "$SRC" || fail "source missing thumb paint path"
+grep -q '_thumbActorFromDataUrl' "$SRC" || fail "source missing _thumbActorFromDataUrl"
 grep -q '_browserWindows' "$SRC" || fail "source missing minimized-capable window list"
 grep -q 'BROWSER_MATCHERS' "$SRC" || fail "source missing BROWSER_MATCHERS SSOT table"
 grep -q '_matchBrowserApp' "$SRC" || fail "source missing _matchBrowserApp"
@@ -43,7 +44,7 @@ if grep -q 'PopupImageMenuItem\|PopupMenuItem' "$SRC"; then
   fail "source still uses PopupMenuItem (ornament padding)"
 fi
 if [[ -f "$META" ]]; then
-  grep -q '"version": 16' "$META" || fail "metadata.json version must be 16"
+  grep -q '"version": 19' "$META" || fail "metadata.json version must be 19"
 fi
 
 # Every enabled registry id must appear in extension.js matcher table.

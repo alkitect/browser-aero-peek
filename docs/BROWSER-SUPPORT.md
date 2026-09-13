@@ -2,43 +2,55 @@
 
 Release-source matrix for **browser-aero-peek**. Runtime enablement is controlled by `config/browsers.json` (`enabled: true|false`). This document is the human-facing In/Out view.
 
-## At this tag
+## At this tip (Unreleased)
 
-| Browser | Status | Notes |
-|---------|--------|--------|
-| **Brave** (`.deb` / native) | **In** | `enabled: true` |
-| **Google Chrome** (`.deb` / native) | **In** | `enabled: true`; `.desktop` `google-chrome.desktop` / `google-chrome`; WM `google-chrome` / `Google-chrome`; NM under `google-chrome/NativeMessagingHosts` |
-| **Opera** (`.deb` / native) | **In** | Registry id `opera`; `.desktop` `opera.desktop` / `opera` / `opera-browser.desktop`; WM `opera` / `Opera`; NM under `opera/NativeMessagingHosts` |
-| **Opera** (Flatpak `com.opera.Opera`) | **In** | Registry id `opera-flatpak` (`family: opera`); `.desktop` `com.opera.Opera.desktop`; **no WM class match** (avoids clash with native); NM under `~/.var/app/com.opera.Opera/config/opera/NativeMessagingHosts` (+ alias `…/google-chrome/NativeMessagingHosts`) via `browser-tabs-nm-flatpak` → `flatpak-spawn --host`; install stages MV3 at `~/.local/share/alkitect-browser-tabs/mv3-opera-flatpak/` with forced `browserId`; overrides: `~/.local/bin:ro`, share dir `:ro`, talk `org.freedesktop.Flatpak` |
-| **Vivaldi** (`.deb` / native) | **In** | Registry id `vivaldi`; `.desktop` `vivaldi-stable.desktop` / `vivaldi-stable` (vendor desktop may omit `StartupWMClass`); WM `vivaldi-stable` / `Vivaldi-stable`; NM under `vivaldi/NativeMessagingHosts`; install stages MV3 at `~/.local/share/alkitect-browser-tabs/mv3-vivaldi/` with forced `browserId` (reduced UA looks like Chrome). **Flatpak/Snap Out** for this enable |
-| **Chromium** (Snap) | **In** (`v0.6.0`) | Registry id `chromium` (`packaging: snap`); `.desktop` `chromium_chromium.desktop`; WM `chromium`; NM under `~/snap/chromium/common/chromium/NativeMessagingHosts` (+ alias `~/.config/chromium/NativeMessagingHosts`); NM host via `~/bin/browser-tabs-nm-snap` with **absolute** host + home-sock paths (Snap remaps `$HOME` — do not expand via `$HOME` in the wrapper); staged MV3 `~/.local/share/alkitect-browser-tabs/mv3-chromium/` with forced `browserId` (remove portal `/run/user/*/doc/…` loads after logout). **Flatpak Chromium deferred.** Ubuntu apt `chromium-browser` is transitional → snap only |
-| Edge | Planned | Disabled stub |
-| Firefox | Planned | `nm_schema: mozilla` reserved; packaging gate before NM |
-| Tor Browser | Feasibility gate | Spike then PASS/FAIL; fail-closed on FAIL |
-| GNOME Web (Epiphany) | **Out** | Not planned |
-| Chromium Flatpak / Opera GX / other Flatpaks | **Out** / deferred | Chromium Flatpak later; others unless a dedicated plan matches |
+| Browser | Packaging | Status | Notes |
+|---------|-----------|--------|--------|
+| **Brave** | `.deb` | **In** | Shared `browser-extension/`; NM under Brave profile |
+| **Brave** | Snap | **In** (registry) | `brave-snap`; staged `mv3-brave-snap/`; snap NM + home sock; live HV only if Snap installed |
+| **Brave** | Flatpak `com.brave.Browser` | **In** (registry) | `brave-flatpak`; staged MV3; `flatpak-spawn --host`; override skip if app missing |
+| **Chrome** | `.deb` | **In** | Shared `browser-extension/` |
+| **Chrome** | Flatpak `com.google.Chrome` | **In** (registry) | `chrome-flatpak`; same Flatpak pattern as Opera |
+| **Opera** | `.deb` | **In** | Shared `browser-extension/` |
+| **Opera** | Flatpak `com.opera.Opera` | **In** | `opera-flatpak`; staged MV3; aliases under Flatpak google-chrome NM path |
+| **Opera** | Snap | **In** (registry) | `opera-snap`; Shell disambiguates shared WM `Opera` |
+| **Vivaldi** | `.deb` | **In** | Staged `mv3-vivaldi/` (forced id — reduced UA) |
+| **Vivaldi** | Snap / Flatpak | **In** (registry) | `vivaldi-snap` / `vivaldi-flatpak` |
+| **Chromium** | Snap | **In** | `chromium`; staged MV3; `~/bin/browser-tabs-nm-snap` |
+| **Chromium** | Flatpak `org.chromium.Chromium` | **In** (registry) | `chromium-flatpak` |
+| **Edge** | `.deb` | **In** (registry) | `edge`; staged `mv3-edge/`; live HV if Edge installed |
+| **Edge** | Flatpak `com.microsoft.Edge` | **In** (registry) | `edge-flatpak` |
+| **Firefox** | Snap | **In** | Temporary Add-on **`.xpi`** (`~/snap/firefox/common/alkitect-mv3-firefox.xpi`); NM portal `~/.mozilla/…`; reload after Firefox quit. **Durable (AMO-signed) deferred** — see SECURITY. `.deb`/Flatpak → FIREFOX-PKG-EXPAND |
+| **Tor Browser** | — | **Out** | [TOR-FEASIBILITY.md](TOR-FEASIBILITY.md) **FAIL** — stay `enabled: false` |
+| GNOME Web | — | **Out** | Not planned |
 
 ## Enabled vs disabled
 
-- **Enabled:** install writes Native Messaging JSON under that browser’s profile-relative `nm_path` (and `nm_path_aliases` when set) with exactly one `allowed_origins` (shared extension id). `nm_base` is `xdg_config` (default) or `home` (Flatpak `.var/...` or Snap `snap/...`).
-- **Disabled:** install **must not** create NM JSON under that `nm_path` (even briefly). Uninstall still removes orphans if any exist.
-- **Wrong-lane:** installing the deprecated Brave-only product (`brave-aero-peek`) overwrites the same host UUID / unit / NM basename — do not alternate. Use this repo only.
+- **Enabled:** install writes Native Messaging JSON under that browser’s profile-relative `nm_path` (and aliases) with schema-correct allowlists (Chromium `allowed_origins` or Mozilla `allowed_extensions`). `nm_base` is `xdg_config` or `home` (Flatpak `.var/...` / Snap `snap/...`).
+- **Disabled:** install **must not** create NM JSON (Tor). Uninstall still removes orphans.
+- **Wrong-lane:** do not alternate with deprecated `brave-aero-peek`.
 
-## Chrome / Opera / Vivaldi / Chromium notes
+## Load paths
 
-- Same unpacked MV3 + same extension id as Brave (shared `allowed_origins`). Isolation = registry + per-browser NM dir + host routing by `browserId`.
-- **Native** Brave / Chrome / Opera: Load unpacked → `browser-extension/`. Quit/relaunch after install.
-- **Vivaldi:** Load unpacked → staged `~/.local/share/alkitect-browser-tabs/mv3-vivaldi/` (same id; `forced-browser-id.js` so hello binds as `vivaldi` — reduced UA otherwise looks like Chrome).
-- **Chromium (Snap):** Load unpacked → staged `~/.local/share/alkitect-browser-tabs/mv3-chromium/`.
-- **Opera Flatpak:** Load unpacked → staged `~/.local/share/alkitect-browser-tabs/mv3-opera-flatpak/` (same id; `forced-browser-id.js` so hello binds as `opera-flatpak`). After logout/reboot, **remove** any old load that still points at `/run/flatpak/doc/…` and load the staged path again (install grants that share dir `:ro`). NM uses `flatpak-spawn --host` (talk-name + `~/.local/bin:ro`).
-- Hover that browser’s dock icon (one window, ≥2 tabs) for **that** browser’s tabs only. Flatpak dock matching uses desktop id `com.opera.Opera.desktop` first; both Opera packages share `StartupWMClass=Opera`, so Shell disambiguates via `Exec` and retries the sibling peer on `NoExtension`.
+- **Native** Brave / Chrome / Opera deb: Load unpacked → `browser-extension/`.
+- **Forced-id Chromium lanes** (Snap, Flatpak, Vivaldi, Edge): Load unpacked → `~/.local/share/alkitect-browser-tabs/mv3-<id>/`.
+- **Firefox Snap:** Temporary Add-on → `~/snap/firefox/common/alkitect-mv3-firefox.xpi` (not `manifest.json` — Snap document portal otherwise exposes one file). Unloads on Firefox quit until **FIREFOX-DURABLE** (Mozilla-signed `.xpi`).
+- Flatpak / Snap: remove ephemeral portal loads (`/run/flatpak/doc/…`, `/run/user/*/doc/…`) after logout.
 
-## Packaging
+## Packaging notes
 
-Native `.deb` / distro packages for Brave, Chrome, Opera, and Vivaldi. **Opera Flatpak** and **Chromium Snap** are packaging-variant pilots. Chromium Flatpak stays deferred. Other Flatpak/Snap browsers stay Out until a dedicated plan says otherwise.
+Shell matchers put Flatpak/Snap before native when WM classes overlap (Opera / Brave / Vivaldi). Sibling `NoExtension` retry walks the packaging family. **One Wayland logout/in** after Shell metadata bumps covers all enabled lanes.
+
+## Follow-ups (not this tip’s tag blockers)
+
+| Item | Notes |
+|------|--------|
+| Firefox durable install | Mozilla-signed `.xpi` (AMO listed/unlisted); same gecko id |
+| Firefox `.deb` / Flatpak | `FIREFOX-PKG-EXPAND` after Snap lane |
+| Edge / packaging live HV | Only when that package is installed; registry already In |
 
 ## See also
 
-- [SECURITY.md](SECURITY.md) — concurrent-browser trust plane + Flatpak spawn boundary
+- [SECURITY.md](SECURITY.md) — concurrent-browser trust plane + Flatpak/Snap spawn boundaries
 - [ARCHITECTURE.md](ARCHITECTURE.md) — multi-browser C4
-- Parent roadmap lives in the maintainer’s umbrella plan (not shipped here)
+- [TOR-FEASIBILITY.md](TOR-FEASIBILITY.md) — Tor FAIL evidence

@@ -8,7 +8,7 @@ README variant: B
 
 **First public tag: v0.2.9**
 
-**Current tag: v0.6.1**
+**Current tag: v0.7.0**
 
 **V-001 count (organic, not invent / not copy):**
 
@@ -24,16 +24,17 @@ README variant: B
 | `v0.5.0` | Vivaldi `.deb` (staged MV3 forced `browserId`; Flatpak/Snap Out) + NM reconnect-on-daemon-death — **minor** |
 | `v0.6.0` | Chromium Snap (absolute-path NM wrapper; home sock; staged forced `browserId`; Flatpak deferred) — **minor** |
 | `v0.6.1` | Docs: deprecate Brave-only sibling lane pointers — **patch** |
+| `v0.7.0` | Firefox Snap (mozilla NM + Temporary `.xpi`) + Edge/packaging registry batch + Shell 19 thumb fade — **minor** |
 
-Version triad (current): PUBLISH `Current tag: v0.6.1` · MV3 `0.6.1` · CHANGELOG `## 0.6.1`. First public tag line stays `v0.2.9`.
+Version triad (current): PUBLISH `Current tag: v0.7.0` · MV3 `0.7.0` · CHANGELOG `## 0.7.0`. First public tag line stays `v0.2.9`.
 
 Never copy another alkitect repo’s tag. Use `RC-BEFORE-1.0` in this file only for an intentional 0.9.x RC.
 
 ```bash
 ./scripts/ci-check.sh
-git tag -a v0.6.1 -m "v0.6.1"
+git tag -a v0.7.0 -m "v0.7.0"
 git push origin main
-git push origin v0.6.1
+git push origin v0.7.0
 ```
 
 Repo URL: `https://github.com/alkitect/browser-aero-peek`
@@ -58,34 +59,35 @@ Repo URL: `https://github.com/alkitect/browser-aero-peek`
 
 ## Browser backlog (post-cutover)
 
-Priority order:
+Priority order (**2026-09-13** — Linux-share for uncovered browsers first, then packaging expansions):
 
-1. Brave — **supported**
-2. Google Chrome — **supported**
-3. Opera `.deb` — **supported** (`v0.4.0`)
-4. Opera Flatpak (`opera-flatpak`) — **supported** (`v0.4.0`; packaging pilot)
-5. Vivaldi — **supported** (`v0.5.0`; Flatpak/Snap Out)
-6. Chromium Snap — **supported** (`v0.6.0`; Flatpak deferred)
-7. Microsoft Edge
-8. Mozilla Firefox
-9. Tor Browser (feasibility gate)
-10. GNOME Web — **Out**
+1. Brave `.deb` — **supported**
+2. Google Chrome `.deb` — **supported**
+3. Opera `.deb` + Flatpak — **supported** (`v0.4.0`)
+4. Vivaldi `.deb` — **supported** (`v0.5.0`)
+5. Chromium Snap — **supported** (`v0.6.0`)
+6. Firefox Snap — **supported** (`v0.7.0`; Temporary `.xpi`; durable AMO follow-up)
+7. Edge + packaging expansions — **registry In** (`v0.7.0`; live HV when installed)
+8. Tor Browser — **Out** ([TOR-FEASIBILITY.md](TOR-FEASIBILITY.md) FAIL)
+9. Firefox durable (AMO-signed `.xpi`) — next
+10. Firefox `.deb` / Flatpak — `FIREFOX-PKG-EXPAND` (**active**)
+11. GNOME Web — **Out**
 
 ## Human gate
 
-Published through **v0.6.1** (Brave + Chrome + Opera deb + Opera Flatpak + Vivaldi `.deb` + Chromium Snap; Brave sibling lane deprecated). Optional soak: logout/in + `./scripts/verify-e2e.sh` scrub/corridor/header checklist (does not block the tag).
+Published through **v0.7.0** (Firefox Snap Temporary `.xpi` + packaging/Edge registry batch + Shell 19). Next: Firefox durable AMO; Firefox `.deb`/Flatpak expansion; live HV for packaging lanes when installed.
 
 ## GitHub About
 
 | Field | Value |
 |-------|--------|
-| Description | Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera + Vivaldi + Chromium Snap supported |
+| Description | Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera + Vivaldi + Chromium + Firefox Snap |
 | Website | _(empty — tip via README Ko-fi badge)_ |
 | Topics | `linux`, `ubuntu`, `gnome`, `wayland`, `brave`, `chrome`, `opera`, `vivaldi`, `chromium`, `gnome-shell-extension`, `dock` |
 
 ```bash
 gh repo edit alkitect/browser-aero-peek \
-  --description "Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera + Vivaldi + Chromium Snap supported" \
+  --description "Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera + Vivaldi + Chromium + Firefox Snap" \
   --homepage "" \
   --add-topic linux --add-topic ubuntu --add-topic gnome \
   --add-topic wayland --add-topic brave --add-topic chromium --add-topic gnome-shell-extension \

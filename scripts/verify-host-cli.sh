@@ -30,15 +30,16 @@ if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
   exit 1
 fi
 
-# Test registry: five enabled chromium peers for multiplex soak.
+# Test registry: all currently enabled peers for multiplex soak.
 TMP_REG="$(mktemp)"
 export ALKITECT_BROWSERS_JSON="${TMP_REG}"
 python3 - <<PY
 import json
 from pathlib import Path
 src = json.loads(Path("${ROOT}/config/browsers.json").read_text())
+enabled_ids = {e["id"] for e in src["browsers"] if e.get("enabled")}
 for e in src["browsers"]:
-    e["enabled"] = e["id"] in ("brave", "chrome", "opera", "opera-flatpak", "vivaldi", "chromium")
+    e["enabled"] = e["id"] in enabled_ids
 Path("${TMP_REG}").write_text(json.dumps(src, indent=2) + "\n")
 PY
 
@@ -114,21 +115,29 @@ while True:
 PY
 }
 
-start_fake_peer brave 1 2 3
-FAKE_BRAVE=$!
-start_fake_peer chrome 10 20 30
-FAKE_CHROME=$!
-start_fake_peer opera 100 200 300
-FAKE_OPERA=$!
-start_fake_peer opera-flatpak 1000 2000 3000
-FAKE_OPERA_FP=$!
-start_fake_peer vivaldi 10000 20000 30000
-FAKE_VIVALDI=$!
-start_fake_peer chromium 100000 200000 300000
-FAKE_CHROMIUM=$!
+# Spawn one fake peer per enabled registry id (tab ids spaced to avoid collisions).
+FAKE_PIDS=()
+mapfile -t ENABLED_IDS < <(python3 - <<PY
+import json
+from pathlib import Path
+data = json.loads(Path("${ROOT}/config/browsers.json").read_text())
+for e in data["browsers"]:
+    if e.get("enabled"):
+        print(e["id"])
+PY
+)
+i=0
+for bid in "${ENABLED_IDS[@]}"; do
+  base=$(( (i + 1) * 1000000 ))
+  start_fake_peer "${bid}" "${base}" "$((base + 1))" "$((base + 2))"
+  FAKE_PIDS+=($!)
+  i=$((i + 1))
+done
 
 cleanup_all() {
-  kill "${FAKE_BRAVE}" "${FAKE_CHROME}" "${FAKE_OPERA}" "${FAKE_OPERA_FP}" "${FAKE_VIVALDI}" "${FAKE_CHROMIUM}" 2>/dev/null || true
+  if ((${#FAKE_PIDS[@]})); then
+    kill "${FAKE_PIDS[@]}" 2>/dev/null || true
+  fi
   kill "${DAEMON_PID}" 2>/dev/null || true
   rm -f "${TMP_REG}"
   if [[ "${STOPPED_UNIT}" -eq 1 ]]; then
@@ -141,9 +150,19 @@ sleep 0.5
 echo "=== status ==="
 STATUS="$(browser-tabs-host cli status)"
 echo "${STATUS}"
-echo "${STATUS}" | python3 -c 'import json,sys; d=json.load(sys.stdin); p=set(d.get("peers",[])); assert p>={"brave","chrome","opera","opera-flatpak","vivaldi","chromium"}, d'
+ENABLED_CSV="$(IFS=,; echo "${ENABLED_IDS[*]}")"
+STATUS="${STATUS}" ENABLED_CSV="${ENABLED_CSV}" python3 - <<'PY'
+import json, os, sys
+d = json.loads(os.environ["STATUS"])
+want = set(os.environ["ENABLED_CSV"].split(","))
+got = set(d.get("peers") or [])
+if not want <= got:
+    print(f"FAIL: peers missing {want - got}; got {got}", file=sys.stderr)
+    sys.exit(1)
+print("status peers OK", sorted(want))
+PY
 
-echo "=== list brave ==="
+echo "=== list brave (sample) ==="
 OUT="$(browser-tabs-host cli list --browser brave)"
 echo "${OUT}"
 OUT="${OUT}" python3 - <<'PY'
@@ -157,36 +176,26 @@ assert tabs[1]["favicon"].startswith("https://")
 print("list brave OK")
 PY
 
-echo "=== list chrome ==="
-OUT_C="$(browser-tabs-host cli list --browser chrome)"
-echo "${OUT_C}"
-echo "${OUT_C}" | python3 -c 'import json,sys; t=json.load(sys.stdin); assert t[0]["title"]=="chrome-A", t'
+# Spot-check one list per enabled id (title prefix = browser id).
+for bid in "${ENABLED_IDS[@]}"; do
+  echo "=== list ${bid} ==="
+  OUT_B="$(browser-tabs-host cli list --browser "${bid}")"
+  echo "${OUT_B}" | python3 -c "import json,sys; t=json.load(sys.stdin); assert t[0]['title']=='${bid}-A', t"
+done
 
-echo "=== list opera ==="
-OUT_O="$(browser-tabs-host cli list --browser opera)"
-echo "${OUT_O}"
-echo "${OUT_O}" | python3 -c 'import json,sys; t=json.load(sys.stdin); assert t[0]["title"]=="opera-A", t'
-
-echo "=== list opera-flatpak ==="
-OUT_OF="$(browser-tabs-host cli list --browser opera-flatpak)"
-echo "${OUT_OF}"
-echo "${OUT_OF}" | python3 -c 'import json,sys; t=json.load(sys.stdin); assert t[0]["title"]=="opera-flatpak-A", t'
-
-echo "=== list vivaldi ==="
-OUT_V="$(browser-tabs-host cli list --browser vivaldi)"
-echo "${OUT_V}"
-echo "${OUT_V}" | python3 -c 'import json,sys; t=json.load(sys.stdin); assert t[0]["title"]=="vivaldi-A", t'
-
-echo "=== list chromium ==="
-OUT_CR="$(browser-tabs-host cli list --browser chromium)"
-echo "${OUT_CR}"
-echo "${OUT_CR}" | python3 -c 'import json,sys; t=json.load(sys.stdin); assert t[0]["title"]=="chromium-A", t'
-
-echo "=== activate brave 2 ==="
-browser-tabs-host cli activate --browser brave 2
+echo "=== activate brave 1000001 ==="
+browser-tabs-host cli activate --browser brave 1000001
 
 echo "=== foreign Activate (chrome tab via brave key) ==="
-if browser-tabs-host cli activate --browser brave 10 2>/tmp/alkitect-foreign-act.err; then
+# chrome peer tab base is 2000000 when brave is first enabled id
+FOREIGN_TAB="$(python3 - <<PY
+import json
+from pathlib import Path
+ids = [e["id"] for e in json.loads(Path("${ROOT}/config/browsers.json").read_text())["browsers"] if e.get("enabled")]
+print((ids.index("chrome") + 1) * 1000000)
+PY
+)"
+if browser-tabs-host cli activate --browser brave "${FOREIGN_TAB}" 2>/tmp/alkitect-foreign-act.err; then
   echo "FAIL: expected foreign Activate to fail" >&2
   exit 1
 fi
@@ -195,26 +204,47 @@ grep -qiE 'ForeignTab|Failed|Invalid' /tmp/alkitect-foreign-act.err \
 echo "foreign Activate rejected OK"
 
 echo "=== thumb prune scoped ==="
-HOST_PATH="${HOST}" "${PYTHON3}" - <<'PY'
+HOST_PATH="${HOST}" ENABLED_CSV="${ENABLED_CSV}" "${PYTHON3}" - <<'PY'
 import importlib.util, os
 from pathlib import Path
 host = os.environ["HOST_PATH"]
+bids = os.environ["ENABLED_CSV"].split(",")
 spec = importlib.util.spec_from_file_location("browser_tabs_host", host)
 mod = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
 spec.loader.exec_module(mod)
 base = mod.thumb_cache_dir()
-for bid in ("brave", "chrome", "opera", "opera-flatpak", "vivaldi", "chromium"):
+for bid in bids:
     (base / bid).mkdir(parents=True, exist_ok=True)
     (base / bid / "tab-99.png").write_bytes(b"x")
 assert mod.prune_thumb_files("brave", {1, 2, 3}) >= 1
-assert (base / "chrome" / "tab-99.png").is_file()
-assert (base / "opera-flatpak" / "tab-99.png").is_file()
-assert (base / "vivaldi" / "tab-99.png").is_file()
-assert (base / "chromium" / "tab-99.png").is_file()
-for bid in ("chrome", "opera", "opera-flatpak", "vivaldi", "chromium"):
+for bid in bids:
+    if bid == "brave":
+        continue
+    assert (base / bid / "tab-99.png").is_file()
     (base / bid / "tab-99.png").unlink()
 print("thumb prune scoped OK")
+PY
+
+echo "=== mozilla argv[0] native launch ==="
+HOST_PATH="${HOST}" "${PYTHON3}" - <<'PY'
+import importlib.util, os
+host = os.environ["HOST_PATH"]
+spec = importlib.util.spec_from_file_location("browser_tabs_host", host)
+mod = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+spec.loader.exec_module(mod)
+def classify(argv0):
+    if argv0 in ("daemon", "native", "cli"):
+        return argv0
+    if argv0.startswith("chrome-extension://") or "@" in argv0:
+        return "native"
+    return "unknown"
+assert classify("browser-tab-dock@alkitect") == "native"
+assert classify("chrome-extension://nnkglnaajlmfinohhknmgpacbgpdadgg/") == "native"
+assert classify("daemon") == "daemon"
+assert classify("bogus") == "unknown"
+print("mozilla argv fixture OK")
 PY
 
 echo "PASS verify-host-cli"
