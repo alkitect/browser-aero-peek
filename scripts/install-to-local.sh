@@ -198,6 +198,10 @@ def write_nm_mozilla(nm_dir: Path, path: str) -> None:
     print("allowed_extensions:", out["allowed_extensions"])
 
 def nm_bin_for(entry) -> str:
+    # Mozilla lanes share ~/.mozilla portal NM JSON — use home-sock bridge for Snap,
+    # Flatpak portal host spawn, and Mozilla .deb (daemon already listens on home sock).
+    if entry.get("nm_schema") == "mozilla":
+        return bin_nm_snap
     pkg = entry.get("packaging")
     if pkg == "flatpak":
         return bin_nm_flatpak
@@ -242,48 +246,73 @@ if wrote < 1:
     sys.exit(1)
 PY
 
-# Firefox Snap: XDG portal looks up NM under ~/.mozilla/… (not only ~/snap/firefox/…).
+# Firefox: XDG portal looks up NM under ~/.mozilla/… (Snap + Flatpak).
 # Grant webextensions permission for our host name (same store KeePassXC uses).
 if command -v flatpak >/dev/null 2>&1; then
-  if python3 - "${BROWSERS_JSON}" <<'PY'
-import json, sys
+  python3 - <<PY
+import json, subprocess
 from pathlib import Path
-data = json.loads(Path(sys.argv[1]).read_text())
-raise SystemExit(0 if any(e.get("id") == "firefox" and e.get("enabled") for e in data["browsers"]) else 1)
+data = json.loads(Path("${BROWSERS_JSON}").read_text())
+grants = []
+for e in data["browsers"]:
+    if not e.get("enabled") or e.get("nm_schema") != "mozilla":
+        continue
+    pkg = e.get("packaging")
+    if pkg == "snap":
+        grants.append("snap.firefox")
+    elif pkg == "flatpak" and e.get("flatpak_id"):
+        grants.append(e["flatpak_id"])
+for app in dict.fromkeys(grants):
+    r = subprocess.run(
+        ["flatpak", "permission-set", "webextensions", "org.alkitect.browser_tabs", app, "yes"],
+        capture_output=True,
+    )
+    if r.returncode == 0:
+        print(f"flatpak permission-set webextensions org.alkitect.browser_tabs {app} yes")
+    else:
+        print(f"install: warn — could not set webextensions portal permission for {app}")
 PY
-  then
-    flatpak permission-set webextensions org.alkitect.browser_tabs snap.firefox yes 2>/dev/null \
-      && echo "flatpak permission-set webextensions org.alkitect.browser_tabs snap.firefox yes" \
-      || echo "install: warn — could not set webextensions portal permission for snap.firefox"
-  fi
 fi
 
-# Also stage Firefox MV3 under non-hidden paths + a single .xpi for Snap Temporary Add-on.
-# Snap document portal often exposes only the selected file — multi-file folder loads break
-# (manifest only, no background.js). Loading the .xpi avoids that.
-FIREFOX_SHARE="${HOME}/alkitect-browser-tabs/mv3-firefox"
-FIREFOX_XPI="${HOME}/alkitect-browser-tabs/mv3-firefox.xpi"
-FIREFOX_SNAP_DIR="${HOME}/snap/firefox/common/alkitect-mv3-firefox"
-FIREFOX_SNAP_XPI="${HOME}/snap/firefox/common/alkitect-mv3-firefox.xpi"
-if [[ -d "${SHARE_DIR}/mv3-firefox" ]]; then
-  rm -rf "${FIREFOX_SHARE}" "${FIREFOX_SNAP_DIR}"
-  mkdir -p "$(dirname "${FIREFOX_SHARE}")" "$(dirname "${FIREFOX_SNAP_DIR}")"
-  cp -a "${SHARE_DIR}/mv3-firefox" "${FIREFOX_SHARE}"
-  cp -a "${SHARE_DIR}/mv3-firefox" "${FIREFOX_SNAP_DIR}"
-  rm -f "${FIREFOX_XPI}" "${FIREFOX_SNAP_XPI}"
-  python3 - <<PY
-import zipfile
+# Stage Temporary Add-on .xpi per enabled mozilla lane (Snap needs non-hidden snap-common path).
+python3 - <<PY
+import json, shutil, zipfile
 from pathlib import Path
-src = Path("${FIREFOX_SHARE}")
+
+home = Path.home()
+share = Path("${SHARE_DIR}")
+data = json.loads(Path("${BROWSERS_JSON}").read_text())
 names = ["manifest.json", "forced-browser-id.js", "background.js"]
-for dest in (Path("${FIREFOX_XPI}"), Path("${FIREFOX_SNAP_XPI}")):
+
+def write_xpi(src: Path, dest: Path) -> None:
+    dest.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(dest, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for name in names:
             zf.write(src / name, arcname=name)
     print(f"Staged Firefox Temporary Add-on xpi: {dest}")
+
+for e in data["browsers"]:
+    if not e.get("enabled") or e.get("nm_schema") != "mozilla":
+        continue
+    bid = e["id"]
+    staged = share / f"mv3-{bid}"
+    if not staged.is_dir():
+        continue
+    home_dir = home / "alkitect-browser-tabs" / f"mv3-{bid}"
+    home_xpi = home / "alkitect-browser-tabs" / f"mv3-{bid}.xpi"
+    if home_dir.exists():
+        shutil.rmtree(home_dir)
+    shutil.copytree(staged, home_dir)
+    write_xpi(staged, home_xpi)
+    if e.get("packaging") == "snap":
+        snap_dir = home / "snap/firefox/common/alkitect-mv3-firefox"
+        snap_xpi = home / "snap/firefox/common/alkitect-mv3-firefox.xpi"
+        if snap_dir.exists():
+            shutil.rmtree(snap_dir)
+        shutil.copytree(staged, snap_dir)
+        write_xpi(staged, snap_xpi)
+        print(f"Staged Snap-visible Firefox MV3 dir: {snap_dir}")
 PY
-  echo "Staged Snap-visible Firefox MV3 dir: ${FIREFOX_SNAP_DIR}"
-fi
 
 # Firefox Snap: force NM via XDG portal (bug 1930119 / KeePassXC). Pref applies on next Firefox start.
 FF_PROFILES="${HOME}/snap/firefox/common/.mozilla/firefox"
@@ -296,6 +325,19 @@ user_pref("widget.use-xdg-desktop-portal.native-messaging", 2);
 EOF
     echo "Wrote ${prof}/user.js (portal native-messaging=2)"
   done < <(find "${FF_PROFILES}" -mindepth 2 -maxdepth 2 -name prefs.js -print0 2>/dev/null)
+fi
+
+# Flatpak Firefox: same portal pref on profiles under XDG config inside the app.
+FF_FP_PROFILES="${HOME}/.var/app/org.mozilla.firefox/config/mozilla/firefox"
+if [[ -d "${FF_FP_PROFILES}" ]]; then
+  while IFS= read -r -d '' prefs; do
+    prof="$(dirname "${prefs}")"
+    cat >"${prof}/user.js" <<'EOF'
+// browser-aero-peek: Flatpak native messaging via XDG desktop portal
+user_pref("widget.use-xdg-desktop-portal.native-messaging", 2);
+EOF
+    echo "Wrote ${prof}/user.js (portal native-messaging=2)"
+  done < <(find "${FF_FP_PROFILES}" -mindepth 2 -maxdepth 2 -name prefs.js -print0 2>/dev/null)
 fi
 
 # Flatpak: host NM re-exec (talk-name) + staged MV3 path (documented in SECURITY.md).
@@ -363,15 +405,18 @@ for e in data["browsers"]:
     pkg = e.get("packaging", "native")
     staged = share / f"mv3-{bid}"
     if e.get("nm_schema") == "mozilla":
-        xpi = Path.home() / "snap/firefox/common/alkitect-mv3-firefox.xpi"
-        if not xpi.is_file():
-            xpi = Path.home() / "alkitect-browser-tabs" / "mv3-firefox.xpi"
+        home_xpi = Path.home() / "alkitect-browser-tabs" / f"mv3-{bid}.xpi"
+        if e.get("packaging") == "snap":
+            snap_xpi = Path.home() / "snap/firefox/common/alkitect-mv3-firefox.xpi"
+            xpi = snap_xpi if snap_xpi.is_file() else home_xpi
+        else:
+            xpi = home_xpi
         print(f"  {bid} ({pkg}): about:debugging → Load Temporary Add-on → {xpi}")
-        print("       IMPORTANT: load the .xpi (not manifest.json). Snap portal often exposes only one file;")
+        print("       IMPORTANT: load the .xpi (not manifest.json). Snap/Flatpak portals often expose only one file;")
         print("       a folder/manifest pick yields Location /run/user/*/doc/… with no background.js.")
         print(f"       gecko id browser-tab-dock@alkitect; forced browserId={bid}; portal NM ~/.mozilla")
         print("       Temporary add-ons unload when Firefox quits — reload .xpi after every restart")
-        print("       Then: browser-tabs-host cli list --browser firefox  (must show tabs before hover works)")
+        print(f"       Then: browser-tabs-host cli list --browser {bid}  (must show tabs before hover works)")
     elif staged.is_dir():
         print(f"  {bid} ({pkg}): extensions → Load unpacked → {staged}")
         print(f"       forced hello browserId={bid}; same Chromium extension ID {ext_id}")

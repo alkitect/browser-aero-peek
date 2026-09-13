@@ -208,6 +208,22 @@
       "flatpak_talk_names": ["org.freedesktop.Flatpak"]
     },
     {
+      "id": "firefox-flatpak",
+      "family": "firefox",
+      "packaging": "flatpak",
+      "enabled": true,
+      "nm_schema": "mozilla",
+      "nm_base": "home",
+      "nm_path": ".mozilla/native-messaging-hosts",
+      "desktop_ids": ["org.mozilla.firefox.desktop"],
+      "wm_classes": [],
+      "flatpak_id": "org.mozilla.firefox",
+      "flatpak_filesystem": [
+        "~/alkitect-browser-tabs:ro"
+      ],
+      "flatpak_talk_names": ["org.freedesktop.Flatpak"]
+    },
+    {
       "id": "firefox",
       "family": "firefox",
       "packaging": "snap",
@@ -218,8 +234,19 @@
       "nm_path_aliases": [
         "snap/firefox/common/.mozilla/native-messaging-hosts"
       ],
-      "desktop_ids": ["firefox_firefox.desktop", "firefox.desktop", "firefox"],
-      "wm_classes": ["firefox_firefox", "firefox", "Firefox"]
+      "desktop_ids": ["firefox_firefox.desktop", "firefox_firefox"],
+      "wm_classes": ["firefox_firefox"]
+    },
+    {
+      "id": "firefox-deb",
+      "family": "firefox",
+      "packaging": "deb",
+      "enabled": true,
+      "nm_schema": "mozilla",
+      "nm_base": "home",
+      "nm_path": ".mozilla/native-messaging-hosts",
+      "desktop_ids": ["firefox.desktop", "firefox"],
+      "wm_classes": ["firefox", "Firefox"]
     },
     {
       "id": "tor",

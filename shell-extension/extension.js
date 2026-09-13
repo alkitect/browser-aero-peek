@@ -131,9 +131,19 @@ const BROWSER_MATCHERS = [
         wmClasses: ['microsoft-edge', 'Microsoft-edge'],
     },
     {
+        id: 'firefox-flatpak',
+        desktopIds: ['org.mozilla.firefox.desktop'],
+        wmClasses: [],
+    },
+    {
         id: 'firefox',
-        desktopIds: ['firefox_firefox.desktop', 'firefox.desktop', 'firefox'],
-        wmClasses: ['firefox_firefox', 'firefox', 'Firefox'],
+        desktopIds: ['firefox_firefox.desktop', 'firefox_firefox'],
+        wmClasses: ['firefox_firefox'],
+    },
+    {
+        id: 'firefox-deb',
+        desktopIds: ['firefox.desktop', 'firefox'],
+        wmClasses: ['firefox', 'Firefox'],
     },
 ];
 
@@ -377,6 +387,26 @@ function _matchVivaldiFamily(app, id, wm) {
     return null;
 }
 
+/** Firefox Snap / Flatpak / Mozilla .deb — Snap WM is firefox_firefox; Flatpak+deb share firefox. */
+function _matchFirefoxFamily(app, id, wm) {
+    if (id === 'org.mozilla.firefox.desktop')
+        return 'firefox-flatpak';
+    if (id === 'firefox_firefox.desktop' || id === 'firefox_firefox')
+        return 'firefox';
+    if (id === 'firefox.desktop' || id === 'firefox')
+        return 'firefox-deb';
+    const exec = _appExecLower(app);
+    if (exec.includes('flatpak') || id.startsWith('org.mozilla.firefox'))
+        return 'firefox-flatpak';
+    if (exec.includes('/snap/') || exec.includes('snap/bin/firefox') || id.includes('firefox_firefox'))
+        return 'firefox';
+    if (wm === 'firefox_firefox')
+        return 'firefox';
+    if (wm === 'firefox')
+        return 'firefox-deb';
+    return null;
+}
+
 /** Match dock app → registry browser id (or null). */
 function _matchBrowserApp(app) {
     if (!app)
@@ -404,10 +434,16 @@ function _matchBrowserApp(app) {
         if (vivaldiId)
             return vivaldiId;
     }
+    if (id.includes('firefox') || wm === 'firefox' || wm === 'firefox_firefox') {
+        const firefoxId = _matchFirefoxFamily(app, id, wm);
+        if (firefoxId)
+            return firefoxId;
+    }
     const skipFamily = {
         opera: 1, 'opera-flatpak': 1, 'opera-snap': 1,
         brave: 1, 'brave-flatpak': 1, 'brave-snap': 1,
         vivaldi: 1, 'vivaldi-flatpak': 1, 'vivaldi-snap': 1,
+        firefox: 1, 'firefox-flatpak': 1, 'firefox-deb': 1,
     };
     for (const m of BROWSER_MATCHERS) {
         if (skipFamily[m.id])
@@ -430,6 +466,7 @@ function _peerFallback(browserId) {
         opera: ['opera', 'opera-flatpak', 'opera-snap'],
         brave: ['brave', 'brave-flatpak', 'brave-snap'],
         vivaldi: ['vivaldi', 'vivaldi-flatpak', 'vivaldi-snap'],
+        firefox: ['firefox', 'firefox-flatpak', 'firefox-deb'],
     };
     for (const peers of Object.values(families)) {
         const i = peers.indexOf(browserId);

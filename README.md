@@ -15,15 +15,15 @@ Thumbnails are screenshots from the last time that tab was visible — Chromium 
 
 Dock **click** stays stock minimize-or-previews. Peek is hover-only.
 
-**At this tip (Unreleased), the registry enables Chromium-family packaging variants (deb / Snap / Flatpak where listed), Microsoft Edge (deb + Flatpak), and Firefox Snap.** Tor Browser stays **Out** ([TOR-FEASIBILITY.md](docs/TOR-FEASIBILITY.md) FAIL). Live hover only works for packages you actually install.
+**At this tip (`v0.8.0`), the registry enables Chromium-family packaging variants (deb / Snap / Flatpak where listed), Microsoft Edge (deb + Flatpak), and Firefox (Snap + Mozilla `.deb` + Flatpak).** Tor Browser stays **Out** ([TOR-FEASIBILITY.md](docs/TOR-FEASIBILITY.md) FAIL). Live hover only works for packages you actually install.
 
 ## Who this is for
 
 See **[docs/BROWSER-SUPPORT.md](docs/BROWSER-SUPPORT.md)** for the full In / Planned / Out matrix and enabled/disabled NM semantics.
 
-- **In (registry):** Brave / Chrome / Opera / Vivaldi / Chromium / Edge packaging rows in `config/browsers.json`; Firefox Snap
+- **In (registry):** Brave / Chrome / Opera / Vivaldi / Chromium / Edge packaging rows in `config/browsers.json`; Firefox Snap / Mozilla `.deb` / Flatpak
 - **In (this machine):** whatever of those packages you have installed — NM JSON is written for all enabled rows; Flatpak overrides apply only when the Flatpak app exists
-- **Out:** Tor Browser (feasibility FAIL); GNOME Web; Firefox `.deb`/Flatpak this wave; non-GNOME desktops
+- **Out:** Tor Browser (feasibility FAIL); GNOME Web; non-GNOME desktops
 - **Shell:** Ubuntu 22.04 + GNOME Shell 42 **Wayland**, Ubuntu Dock; **one** logout/in after Shell matcher changes
 
 ## Quick start
@@ -46,6 +46,8 @@ chmod +x scripts/*.sh
 | Vivaldi **deb** | `vivaldi://extensions` | staged `mv3-vivaldi/` (forced id — reduced UA looks like Chrome) |
 | Snap / Flatpak Chromium-family | that browser’s extensions page | staged `mv3-<id>/` (remove portal `/run/…/doc/…` loads) |
 | Firefox Snap | `about:debugging#/runtime/this-firefox` | Temporary Add-on → **`~/snap/firefox/common/alkitect-mv3-firefox.xpi`** (`.xpi` not `manifest.json`; reloads after Firefox quit until AMO-signed durable follow-up) |
+| Firefox Mozilla `.deb` | same | Temporary Add-on → **`~/alkitect-browser-tabs/mv3-firefox-deb.xpi`** |
+| Firefox Flatpak | same | Temporary Add-on → **`~/alkitect-browser-tabs/mv3-firefox-flatpak.xpi`** |
 
 Confirm Chromium-family ID matches `browser-extension/extension-id.txt`. Fully quit/relaunch each browser, then `browser-tabs-host cli list --browser <id>`.
 
@@ -112,7 +114,7 @@ Versions: MV3 `browser-extension/manifest.json` (git tags track this) · Shell `
 
 ## Limits & safety
 
-- **Linux + Ubuntu Dock + Brave/Chrome/Opera (`.deb` + Flatpak)/Vivaldi (`.deb`)/Chromium (Snap)/Firefox (Snap) at this tip** — other OSes, docks, and browsers stay unsupported until their roadmap wave ships.
+- **Linux + Ubuntu Dock + Brave/Chrome/Opera (`.deb` + Flatpak)/Vivaldi (`.deb`)/Chromium (Snap)/Firefox (Snap + Mozilla `.deb` + Flatpak) at this tip** — other OSes, docks, and browsers stay unsupported until their roadmap wave ships.
 - **One window per browser** with ≥2 tabs for peek; several windows of the same browser → no tab strip (stock window previews still work).
 - **Thumbnails are page screenshots** (more sensitive than titles). Same-UID processes on D-Bus or the host socket can read them — details in [SECURITY.md](docs/SECURITY.md).
 - Hover dwell and host rate limits reduce spam while scrubbing past the icon.

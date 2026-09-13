@@ -8,7 +8,7 @@ README variant: B
 
 **First public tag: v0.2.9**
 
-**Current tag: v0.7.0**
+**Current tag: v0.8.0**
 
 **V-001 count (organic, not invent / not copy):**
 
@@ -25,16 +25,17 @@ README variant: B
 | `v0.6.0` | Chromium Snap (absolute-path NM wrapper; home sock; staged forced `browserId`; Flatpak deferred) — **minor** |
 | `v0.6.1` | Docs: deprecate Brave-only sibling lane pointers — **patch** |
 | `v0.7.0` | Firefox Snap (mozilla NM + Temporary `.xpi`) + Edge/packaging registry batch + Shell 19 thumb fade — **minor** |
+| `v0.8.0` | Firefox Mozilla `.deb` + Flatpak (`firefox-deb` / `firefox-flatpak`) + Shell 20 family matcher — **minor** |
 
-Version triad (current): PUBLISH `Current tag: v0.7.0` · MV3 `0.7.0` · CHANGELOG `## 0.7.0`. First public tag line stays `v0.2.9`.
+Version triad (current): PUBLISH `Current tag: v0.8.0` · MV3 `0.8.0` · CHANGELOG `## 0.8.0`. First public tag line stays `v0.2.9`.
 
 Never copy another alkitect repo’s tag. Use `RC-BEFORE-1.0` in this file only for an intentional 0.9.x RC.
 
 ```bash
 ./scripts/ci-check.sh
-git tag -a v0.7.0 -m "v0.7.0"
+git tag -a v0.8.0 -m "v0.8.0"
 git push origin main
-git push origin v0.7.0
+git push origin v0.8.0
 ```
 
 Repo URL: `https://github.com/alkitect/browser-aero-peek`
@@ -68,26 +69,26 @@ Priority order (**2026-09-13** — Linux-share for uncovered browsers first, the
 5. Chromium Snap — **supported** (`v0.6.0`)
 6. Firefox Snap — **supported** (`v0.7.0`; Temporary `.xpi`; durable AMO follow-up)
 7. Edge + packaging expansions — **registry In** (`v0.7.0`; live HV when installed)
-8. Tor Browser — **Out** ([TOR-FEASIBILITY.md](TOR-FEASIBILITY.md) FAIL)
-9. Firefox durable (AMO-signed `.xpi`) — next
-10. Firefox `.deb` / Flatpak — `FIREFOX-PKG-EXPAND` (**active**)
+8. Firefox Mozilla `.deb` + Flatpak — **supported** (`v0.8.0`; Temporary `.xpi` per lane)
+9. Tor Browser — **Out** ([TOR-FEASIBILITY.md](TOR-FEASIBILITY.md) FAIL)
+10. Firefox durable (AMO-signed `.xpi`) — **next**
 11. GNOME Web — **Out**
 
 ## Human gate
 
-Published through **v0.7.0** (Firefox Snap Temporary `.xpi` + packaging/Edge registry batch + Shell 19). Next: Firefox durable AMO; Firefox `.deb`/Flatpak expansion; live HV for packaging lanes when installed.
+Published through **v0.8.0** (Firefox Snap + Mozilla `.deb` + Flatpak Temporary `.xpi`; Shell 20). Next: **FIREFOX-DURABLE** (AMO-signed persistent `.xpi`).
 
 ## GitHub About
 
 | Field | Value |
 |-------|--------|
-| Description | Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera + Vivaldi + Chromium + Firefox Snap |
+| Description | Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera + Vivaldi + Chromium + Firefox (Snap/deb/Flatpak) |
 | Website | _(empty — tip via README Ko-fi badge)_ |
-| Topics | `linux`, `ubuntu`, `gnome`, `wayland`, `brave`, `chrome`, `opera`, `vivaldi`, `chromium`, `gnome-shell-extension`, `dock` |
+| Topics | `linux`, `ubuntu`, `gnome`, `wayland`, `brave`, `chrome`, `opera`, `vivaldi`, `chromium`, `firefox`, `gnome-shell-extension`, `dock` |
 
 ```bash
 gh repo edit alkitect/browser-aero-peek \
-  --description "Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera + Vivaldi + Chromium + Firefox Snap" \
+  --description "Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera + Vivaldi + Chromium + Firefox (Snap/deb/Flatpak)" \
   --homepage "" \
   --add-topic linux --add-topic ubuntu --add-topic gnome \
   --add-topic wayland --add-topic brave --add-topic chromium --add-topic gnome-shell-extension \

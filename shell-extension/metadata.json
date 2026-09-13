@@ -1,9 +1,9 @@
 {
   "name": "Browser Aero Peek",
-  "description": "Linux/Ubuntu Dock: browser tab thumbnail strip on hover (Chromium-family + Firefox Snap). Stock click unchanged. Author: alkitect.",
+  "description": "Linux/Ubuntu Dock: browser tab thumbnail strip on hover (Chromium-family + Firefox Snap/deb/Flatpak). Stock click unchanged. Author: alkitect.",
   "author": "alkitect",
   "uuid": "browser-tab-dock@alkitect",
-  "version": 19,
+  "version": 20,
   "shell-version": [
     "42"
   ],

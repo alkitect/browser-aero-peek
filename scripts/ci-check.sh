@@ -84,18 +84,18 @@ grep -qF 'EXT_ID_PLACEHOLDER' "${tmpl}" \
 # Version triad: First public tag stays v0.2.9; current release must match MV3 + CHANGELOG
 grep -qF 'First public tag: v0.2.9' docs/PUBLISH.md \
   || { echo "ci-check: docs/PUBLISH.md must record First public tag: v0.2.9" >&2; exit 1; }
-grep -qF 'Current tag: v0.7.0' docs/PUBLISH.md \
-  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.7.0" >&2; exit 1; }
+grep -qF 'Current tag: v0.8.0' docs/PUBLISH.md \
+  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.8.0" >&2; exit 1; }
 python3 - <<'PY'
 import json, sys
 from pathlib import Path
 v = json.loads(Path("browser-extension/manifest.json").read_text())["version"]
-if v != "0.7.0":
-    print(f"ci-check: MV3 version {v!r} != 0.7.0", file=sys.stderr)
+if v != "0.8.0":
+    print(f"ci-check: MV3 version {v!r} != 0.8.0", file=sys.stderr)
     sys.exit(1)
 PY
-grep -qE '^## 0\.7\.0' CHANGELOG.md \
-  || { echo "ci-check: CHANGELOG missing ## 0.7.0" >&2; exit 1; }
+grep -qE '^## 0\.8\.0' CHANGELOG.md \
+  || { echo "ci-check: CHANGELOG missing ## 0.8.0" >&2; exit 1; }
 
 # Absolute home paths (any username) must not appear in shipped sources.
 # Encoded so this script does not embed a concrete account name.
@@ -178,22 +178,23 @@ for e in browsers:
     if schema == "mozilla" and nm_path.rstrip("/").endswith("NativeMessagingHosts"):
         print(f"ci-check: mozilla entry {bid} must not use Chromium NativeMessagingHosts path", file=sys.stderr)
         sys.exit(1)
-    if bid == "firefox":
-        if e.get("packaging") != "snap":
-            print("ci-check: firefox packaging must be snap for this wave", file=sys.stderr)
-            sys.exit(1)
+    if bid == "firefox" or bid.startswith("firefox-"):
         if e.get("nm_schema") != "mozilla":
-            print("ci-check: firefox must use nm_schema mozilla", file=sys.stderr)
+            print(f"ci-check: {bid} must use nm_schema mozilla", file=sys.stderr)
             sys.exit(1)
         if "NativeMessagingHosts" in nm_path:
-            print("ci-check: firefox nm_path must be mozilla native-messaging-hosts shape", file=sys.stderr)
+            print(f"ci-check: {bid} nm_path must be mozilla native-messaging-hosts shape", file=sys.stderr)
             sys.exit(1)
-        # Snap Firefox NM portal reads ~/.mozilla/…, not ~/snap/firefox/… alone.
+        # Portal / classic Mozilla NM reads ~/.mozilla/… (shared path for Snap+Flatpak+deb).
         if nm_path.rstrip("/") != ".mozilla/native-messaging-hosts":
             print(
-                f"ci-check: firefox primary nm_path must be .mozilla/native-messaging-hosts (portal), got {nm_path!r}",
+                f"ci-check: {bid} primary nm_path must be .mozilla/native-messaging-hosts (portal), got {nm_path!r}",
                 file=sys.stderr,
             )
+            sys.exit(1)
+        want_pkg = {"firefox": "snap", "firefox-flatpak": "flatpak", "firefox-deb": "deb"}
+        if bid in want_pkg and e.get("packaging") != want_pkg[bid]:
+            print(f"ci-check: {bid} packaging must be {want_pkg[bid]!r}", file=sys.stderr)
             sys.exit(1)
     if bid == "chromium":
         blob = (nm_path + " " + " ".join(e.get("nm_path_aliases") or [])).lower()
@@ -217,7 +218,7 @@ want = [
     "vivaldi", "vivaldi-snap", "vivaldi-flatpak",
     "chromium", "chromium-flatpak",
     "edge", "edge-flatpak",
-    "firefox",
+    "firefox-flatpak", "firefox", "firefox-deb",
 ]
 if enabled != want:
     print(f"ci-check: enabled browsers must be exactly {want!r}, got {enabled!r}", file=sys.stderr)
@@ -324,39 +325,50 @@ for e in data["browsers"]:
         sys.exit(1)
 print("ci-check: staged MV3 forced-id set OK")
 PY
-# Firefox staged manifest must use background.scripts (service_worker disabled in Firefox Snap).
+# Firefox staged manifests must use background.scripts (service_worker disabled).
 python3 - <<PY
 import json, sys
 from pathlib import Path
-m = json.loads(Path("${tmp}/.local/share/alkitect-browser-tabs/mv3-firefox/manifest.json").read_text())
-bg = m.get("background") or {}
-if "service_worker" in bg:
-    print("ci-check: staged firefox manifest must not set background.service_worker", file=sys.stderr)
-    sys.exit(1)
-scripts = bg.get("scripts") or []
-if "background.js" not in scripts or "forced-browser-id.js" not in scripts:
-    print(f"ci-check: staged firefox background.scripts unexpected: {scripts!r}", file=sys.stderr)
-    sys.exit(1)
-if "favicon" in (m.get("permissions") or []):
-    print("ci-check: staged firefox must not declare Chromium-only favicon permission", file=sys.stderr)
-    sys.exit(1)
+share = Path("${tmp}/.local/share/alkitect-browser-tabs")
+for bid in ("firefox", "firefox-deb", "firefox-flatpak"):
+    m = json.loads((share / f"mv3-{bid}" / "manifest.json").read_text())
+    bg = m.get("background") or {}
+    if "service_worker" in bg:
+        print(f"ci-check: staged {bid} manifest must not set background.service_worker", file=sys.stderr)
+        sys.exit(1)
+    scripts = bg.get("scripts") or []
+    if "background.js" not in scripts or "forced-browser-id.js" not in scripts:
+        print(f"ci-check: staged {bid} background.scripts unexpected: {scripts!r}", file=sys.stderr)
+        sys.exit(1)
+    if "favicon" in (m.get("permissions") or []):
+        print(f"ci-check: staged {bid} must not declare Chromium-only favicon permission", file=sys.stderr)
+        sys.exit(1)
 print("ci-check: firefox staged background.scripts OK")
 PY
-# Portal path + Snap-visible Temporary Add-on xpi
+# Portal path + Temporary Add-on xpis
 test -f "${tmp}/.mozilla/native-messaging-hosts/org.alkitect.browser_tabs.json"
-test -d "${tmp}/alkitect-browser-tabs/mv3-firefox"
-test -f "${tmp}/alkitect-browser-tabs/mv3-firefox.xpi"
 python3 - <<PY
 import zipfile, sys
 from pathlib import Path
-z = zipfile.ZipFile("${tmp}/alkitect-browser-tabs/mv3-firefox.xpi")
-names = set(z.namelist())
+home = Path("${tmp}/alkitect-browser-tabs")
 need = {"manifest.json", "background.js", "forced-browser-id.js"}
-if not need <= names:
-    print(f"ci-check: firefox xpi missing {need - names}", file=sys.stderr)
-    sys.exit(1)
-print("ci-check: firefox xpi OK", sorted(names))
+for bid in ("firefox", "firefox-deb", "firefox-flatpak"):
+    d = home / f"mv3-{bid}"
+    xpi = home / f"mv3-{bid}.xpi"
+    if not d.is_dir():
+        print(f"ci-check: missing home Firefox MV3 dir {d}", file=sys.stderr)
+        sys.exit(1)
+    if not xpi.is_file():
+        print(f"ci-check: missing home Firefox xpi {xpi}", file=sys.stderr)
+        sys.exit(1)
+    names = set(zipfile.ZipFile(xpi).namelist())
+    if not need <= names:
+        print(f"ci-check: {bid} xpi missing {need - names}", file=sys.stderr)
+        sys.exit(1)
+print("ci-check: firefox xpi OK")
 PY
+# Snap lane also stages under snap-common for Temporary Add-on file picker.
+test -f "${tmp}/snap/firefox/common/alkitect-mv3-firefox.xpi"
 grep -q 'browser-tab-dock@alkitect' "${tmp}/.mozilla/native-messaging-hosts/org.alkitect.browser_tabs.json"
 test -x "${tmp}/bin/browser-tabs-nm-snap"
 grep -q 'ALKITECT_BROWSER_TABS_SOCK' "${tmp}/bin/browser-tabs-nm-snap"
@@ -439,10 +451,10 @@ left = sorted(p.name for p in share.glob("mv3-*")) if share.exists() else []
 if left:
     print(f"ci-check: staged MV3 left after uninstall: {left}", file=sys.stderr)
     sys.exit(1)
-home_ff = Path("${tmp}/alkitect-browser-tabs/mv3-firefox")
-home_xpi = Path("${tmp}/alkitect-browser-tabs/mv3-firefox.xpi")
-if home_ff.exists() or home_xpi.exists():
-    print(f"ci-check: home Snap Firefox MV3 left after uninstall: {home_ff} {home_xpi}", file=sys.stderr)
+home = Path("${tmp}/alkitect-browser-tabs")
+left = sorted(p.name for p in home.glob("mv3-firefox*") if p.exists()) if home.exists() else []
+if left:
+    print(f"ci-check: home Firefox MV3 left after uninstall: {left}", file=sys.stderr)
     sys.exit(1)
 print("ci-check: uninstall cleared staged MV3")
 PY

@@ -23,8 +23,8 @@ rm -f "${BIN}/browser-tabs-host" "${BIN}/browser-tabs-nm" "${BIN}/browser-tabs-n
 rm -rf "${CFG_DIR}"
 # Staged forced-id MV3 copies (any packaging lane).
 rm -rf "${SHARE_DIR}"/mv3-*
-rm -rf "${HOME}/alkitect-browser-tabs/mv3-firefox"
-rm -f "${HOME}/alkitect-browser-tabs/mv3-firefox.xpi"
+rm -rf "${HOME}/alkitect-browser-tabs"/mv3-firefox*
+rm -f "${HOME}/alkitect-browser-tabs"/mv3-firefox*.xpi
 rm -rf "${HOME}/snap/firefox/common/alkitect-mv3-firefox"
 rm -f "${HOME}/snap/firefox/common/alkitect-mv3-firefox.xpi"
 rm -f "${HOME}/bin/browser-tabs-nm-snap"

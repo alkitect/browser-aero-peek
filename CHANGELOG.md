@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0
+
+- Enable Firefox Mozilla `.deb` (`firefox-deb`) and Flatpak `org.mozilla.firefox` (`firefox-flatpak`): shared portal NM `~/.mozilla/…` + home-sock bridge; per-lane Temporary `.xpi`; Shell family matcher (metadata **20**).
+
 ## 0.7.0
 
 - Enable Firefox (Snap): mozilla NM (`allowed_extensions` = gecko id `browser-tab-dock@alkitect`); portal path `~/.mozilla/native-messaging-hosts` + snap-tree alias; Temporary Add-on **`.xpi`**; home sock + `browser-tabs-nm-snap`; staged forced `browserId=firefox`; profile `user.js` portal pref. Durable AMO-signed install deferred.
