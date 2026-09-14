@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.1
+
+- Fix install durable `.xpi` discovery (`ROOT` expansion) so `dist/firefox-amo-signed/*.xpi` is copied to `~/alkitect-browser-tabs/browser-tab-dock-signed.xpi`.
+
 ## 0.9.0
 
 - Firefox durable: AMO self-distributed signed `.xpi` (FF140+ `data_collection_permissions`); `stage-firefox-amo` / `amo-keyring` / `amo-sign`; install prefers `~/alkitect-browser-tabs/browser-tab-dock-signed.xpi`; private browsing excluded from list/thumb cache.

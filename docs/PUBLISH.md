@@ -8,7 +8,7 @@ README variant: B
 
 **First public tag: v0.2.9**
 
-**Current tag: v0.9.0**
+**Current tag: v0.9.1**
 
 **V-001 count (organic, not invent / not copy):**
 
@@ -27,16 +27,17 @@ README variant: B
 | `v0.7.0` | Firefox Snap (mozilla NM + Temporary `.xpi`) + Edge/packaging registry batch + Shell 19 thumb fade — **minor** |
 | `v0.8.0` | Firefox Mozilla `.deb` + Flatpak (`firefox-deb` / `firefox-flatpak`) + Shell 20 family matcher — **minor** |
 | `v0.9.0` | Firefox durable AMO-signed `.xpi` + Shell 21 sibling peer-fallback — **minor** |
+| `v0.9.1` | Fix durable `.xpi` install path discovery — **patch** |
 
-Version triad (current): PUBLISH `Current tag: v0.9.0` · MV3 `0.9.0` · CHANGELOG `## 0.9.0`. First public tag line stays `v0.2.9`.
+Version triad (current): PUBLISH `Current tag: v0.9.1` · MV3 `0.9.1` · CHANGELOG `## 0.9.1`. First public tag line stays `v0.2.9`.
 
 Never copy another alkitect repo’s tag. Use `RC-BEFORE-1.0` in this file only for an intentional 0.9.x RC.
 
 ```bash
 ./scripts/ci-check.sh
-git tag -a v0.9.0 -m "v0.9.0"
+git tag -a v0.9.1 -m "v0.9.1"
 git push origin main
-git push origin v0.9.0
+git push origin v0.9.1
 ```
 
 Repo URL: `https://github.com/alkitect/browser-aero-peek`
@@ -77,7 +78,7 @@ Priority order (**2026-09-13** — Linux-share for uncovered browsers first, the
 
 ## Human gate
 
-Published through **v0.9.0** (Firefox durable AMO-signed `.xpi` + Shell 21). Signed WebExt add-on version inside the `.xpi` may lag the product triad until the next AMO re-sign.
+Published through **v0.9.1** (Firefox durable AMO-signed `.xpi` + Shell 21; install path fix). Signed WebExt add-on version inside the `.xpi` may lag the product triad until the next AMO re-sign.
 
 ## GitHub About
 

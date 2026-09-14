@@ -276,7 +276,8 @@ fi
 
 # Prefer Mozilla-signed durable .xpi when present (AMO self-dist / GitHub Release asset).
 # Does not download; copies from dist/firefox-amo-signed/ or existing home copy.
-python3 - <<'PY'
+python3 - <<PY
+import os
 import shutil
 from pathlib import Path
 
@@ -284,7 +285,7 @@ root = Path("${ROOT}")
 home = Path.home()
 dest = home / "alkitect-browser-tabs" / "browser-tab-dock-signed.xpi"
 candidates = []
-env = __import__("os").environ.get("ALKITECT_FIREFOX_SIGNED_XPI", "").strip()
+env = os.environ.get("ALKITECT_FIREFOX_SIGNED_XPI", "").strip()
 if env:
     candidates.append(Path(env).expanduser())
 candidates.append(dest)
