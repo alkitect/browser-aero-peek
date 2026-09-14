@@ -89,18 +89,18 @@ grep -qF 'EXT_ID_PLACEHOLDER' "${tmpl}" \
 # Version triad: First public tag stays v0.2.9; current release must match MV3 + CHANGELOG
 grep -qF 'First public tag: v0.2.9' docs/PUBLISH.md \
   || { echo "ci-check: docs/PUBLISH.md must record First public tag: v0.2.9" >&2; exit 1; }
-grep -qF 'Current tag: v0.10.1' docs/PUBLISH.md \
-  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.10.1" >&2; exit 1; }
+grep -qF 'Current tag: v0.10.2' docs/PUBLISH.md \
+  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.10.2" >&2; exit 1; }
 python3 - <<'PY'
 import json, sys
 from pathlib import Path
 v = json.loads(Path("browser-extension/manifest.json").read_text())["version"]
-if v != "0.10.1":
-    print(f"ci-check: MV3 version {v!r} != 0.10.1", file=sys.stderr)
+if v != "0.10.2":
+    print(f"ci-check: MV3 version {v!r} != 0.10.2", file=sys.stderr)
     sys.exit(1)
 PY
 grep -qE '^## 0\.10\.1' CHANGELOG.md \
-  || { echo "ci-check: CHANGELOG missing ## 0.10.1" >&2; exit 1; }
+  || { echo "ci-check: CHANGELOG missing ## 0.10.2" >&2; exit 1; }
 
 # Firefox AMO stage tree (FF140+/Android142 consent; no Chromium key in dist)
 bash -n scripts/stage-firefox-amo.sh
@@ -329,8 +329,9 @@ trap cleanup EXIT
 export HOME="${tmp}"
 export XDG_CONFIG_HOME="${tmp}/.config"
 export XDG_STATE_HOME="${tmp}/.local/state"
+export XDG_DATA_HOME="${tmp}/.local/share"
 export XDG_RUNTIME_DIR="${tmp}/run"
-mkdir -p "${XDG_CONFIG_HOME}" "${XDG_STATE_HOME}" "${XDG_RUNTIME_DIR}" \
+mkdir -p "${XDG_CONFIG_HOME}" "${XDG_STATE_HOME}" "${XDG_DATA_HOME}" "${XDG_RUNTIME_DIR}" \
   "${tmp}/.local/bin" \
   "${tmp}/.local/share/gnome-shell/extensions" \
   "${tmp}/.config/systemd/user"

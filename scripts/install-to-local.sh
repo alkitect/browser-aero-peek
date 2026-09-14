@@ -5,6 +5,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/lib/automation-wanted.sh
+source "${ROOT}/scripts/lib/automation-wanted.sh"
 BIN="${HOME}/.local/bin"
 SYSTEMD_USER="${XDG_CONFIG_HOME:-${HOME}/.config}/systemd/user"
 CFG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/alkitect-browser-tabs"
@@ -12,6 +14,7 @@ SHARE_DIR="${XDG_DATA_HOME:-${HOME}/.local/share}/alkitect-browser-tabs"
 EXT_ID_FILE="${ROOT}/browser-extension/extension-id.txt"
 BROWSERS_JSON="${ROOT}/config/browsers.json"
 ENABLE_AUTOMATION=0
+UNIT="alkitect-browser-tabs.service"
 
 for arg in "$@"; do
   case "${arg}" in
@@ -26,6 +29,8 @@ for arg in "$@"; do
       ;;
   esac
 done
+
+aw_snapshot_units "${UNIT}"
 
 if [[ ! -f "${EXT_ID_FILE}" ]]; then
   echo "Missing ${EXT_ID_FILE} (generate key first)" >&2
@@ -428,14 +433,22 @@ install -m0644 "${ROOT}/shell-extension/extension.js" "${EXT_DST}/extension.js"
 if [[ -z "${ALKITECT_CI_TMP:-}" ]] && command -v systemctl >/dev/null 2>&1; then
   systemctl --user daemon-reload
   if [[ "${ENABLE_AUTOMATION}" -eq 1 ]]; then
-    systemctl --user enable --now alkitect-browser-tabs.service
+    aw_enable_units "--enable-automation" "${UNIT}"
+    aw_mark_wanted "${CFG_DIR}"
     echo "Enabled alkitect-browser-tabs.service"
+  elif aw_should_restore "${CFG_DIR}"; then
+    aw_enable_units "restored (snapshot/marker)" "${UNIT}"
+    aw_mark_wanted "${CFG_DIR}"
   else
     echo "Units installed; enable with: systemctl --user enable --now alkitect-browser-tabs.service"
     echo "Or re-run: $0 --enable-automation"
   fi
 elif [[ -n "${ALKITECT_CI_TMP:-}" ]]; then
   echo "ALKITECT_CI_TMP=1: skipped systemctl (unit file installed under tmp HOME only)"
+  if [[ "${ENABLE_AUTOMATION}" -eq 1 ]] || aw_should_restore "${CFG_DIR}"; then
+    aw_enable_units "ci-tmp" "${UNIT}"
+    aw_mark_wanted "${CFG_DIR}"
+  fi
 fi
 
 echo

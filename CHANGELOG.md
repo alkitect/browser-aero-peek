@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.10.2
+
+- Install: restore `alkitect-browser-tabs.service` from `automation.wanted` or prior enablement; vendored `scripts/lib/automation-wanted.sh`.
+- CI: pin `XDG_DATA_HOME` under tmp `HOME` so staged MV3 asserts do not follow a host `XDG_DATA_HOME`.
+- Durable AMO-signed `.xpi` remains **0.9.3** (no resign; WebExt runtime unchanged).
+
 ## 0.10.1
 
 - Docs: promote portal-style root README (landing hierarchy, early screenshot, prereqs at Install, Issues/CONTRIBUTING help line, tip-vs-tag honesty).
