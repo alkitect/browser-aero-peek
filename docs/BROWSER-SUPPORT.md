@@ -2,7 +2,7 @@
 
 Release-source matrix for **browser-aero-peek**. Runtime enablement is controlled by `config/browsers.json` (`enabled: true|false`). This document is the human-facing In/Out view.
 
-## At this tip (`v0.8.0`)
+## At this tip (`v0.9.0`)
 
 | Browser | Packaging | Status | Notes |
 |---------|-----------|--------|--------|
@@ -20,9 +20,9 @@ Release-source matrix for **browser-aero-peek**. Runtime enablement is controlle
 | **Chromium** | Flatpak `org.chromium.Chromium` | **In** (registry) | `chromium-flatpak` |
 | **Edge** | `.deb` | **In** (registry) | `edge`; staged `mv3-edge/`; live HV if Edge installed |
 | **Edge** | Flatpak `com.microsoft.Edge` | **In** (registry) | `edge-flatpak` |
-| **Firefox** | Snap | **In** | Temporary Add-on **`.xpi`** (`~/snap/firefox/common/alkitect-mv3-firefox.xpi`); NM portal `~/.mozilla/…`; reload after Firefox quit. **Durable (AMO-signed) deferred** — see SECURITY. |
-| **Firefox** | Mozilla `.deb` | **In** (registry) | `firefox-deb`; Temporary `.xpi` `~/alkitect-browser-tabs/mv3-firefox-deb.xpi`; shared portal NM; Shell disambiguates WM `firefox` vs Snap `firefox_firefox` |
-| **Firefox** | Flatpak `org.mozilla.firefox` | **In** (registry) | `firefox-flatpak`; Temporary `.xpi` `~/alkitect-browser-tabs/mv3-firefox-flatpak.xpi`; portal permission + Shell desktop id first |
+| **Firefox** | Snap | **In** | Durable AMO-signed `.xpi` (`~/alkitect-browser-tabs/browser-tab-dock-signed.xpi`); NM portal `~/.mozilla/…`. Temporary forced-id `.xpi` remains as fallback. |
+| **Firefox** | Mozilla `.deb` | **In** | Same durable `.xpi`; Shell matcher `firefox-deb` → peer `firefox` |
+| **Firefox** | Flatpak `org.mozilla.firefox` | **In** | Same durable `.xpi`; Shell matcher `firefox-flatpak` → peer `firefox` (metadata **21**) |
 | **Tor Browser** | — | **Out** | [TOR-FEASIBILITY.md](TOR-FEASIBILITY.md) **FAIL** — stay `enabled: false` |
 | GNOME Web | — | **Out** | Not planned |
 
@@ -36,9 +36,8 @@ Release-source matrix for **browser-aero-peek**. Runtime enablement is controlle
 
 - **Native** Brave / Chrome / Opera deb: Load unpacked → `browser-extension/`.
 - **Forced-id Chromium lanes** (Snap, Flatpak, Vivaldi, Edge): Load unpacked → `~/.local/share/alkitect-browser-tabs/mv3-<id>/`.
-- **Firefox Snap:** Temporary Add-on → `~/snap/firefox/common/alkitect-mv3-firefox.xpi` (not `manifest.json` — Snap document portal otherwise exposes one file). Unloads on Firefox quit until **FIREFOX-DURABLE** (Mozilla-signed `.xpi`).
-- **Firefox Mozilla `.deb`:** Temporary Add-on → `~/alkitect-browser-tabs/mv3-firefox-deb.xpi`.
-- **Firefox Flatpak:** Temporary Add-on → `~/alkitect-browser-tabs/mv3-firefox-flatpak.xpi` (avoid ephemeral `/run/flatpak/doc/…` folder loads).
+- **Firefox (durable):** `about:addons` → Install Add-on From File → `~/alkitect-browser-tabs/browser-tab-dock-signed.xpi` (after `install-to-local` or GitHub Release asset). See [AMO-FIREFOX.md](AMO-FIREFOX.md).
+- **Firefox Temporary fallback:** `~/snap/firefox/common/alkitect-mv3-firefox.xpi` / `mv3-firefox-*.xpi` — unloads on quit.
 - Flatpak / Snap: remove ephemeral portal loads (`/run/flatpak/doc/…`, `/run/user/*/doc/…`) after logout.
 
 ## Packaging notes
@@ -49,7 +48,7 @@ Shell matchers put Flatpak/Snap before native when WM classes overlap (Opera / B
 
 | Item | Notes |
 |------|--------|
-| Firefox durable install | Mozilla-signed `.xpi` (AMO listed/unlisted); same gecko id |
+| Firefox durable install | Stage `./scripts/stage-firefox-amo.sh` → AMO **On your own** sign ([AMO-FIREFOX.md](AMO-FIREFOX.md)); FF140+; same gecko id |
 | Firefox `.deb` / Flatpak | `FIREFOX-PKG-EXPAND` after Snap lane |
 | Edge / packaging live HV | Only when that package is installed; registry already In |
 

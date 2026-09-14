@@ -240,6 +240,15 @@ async function captureThumb(windowId, tabId) {
     return;
   }
   try {
+    const tab = await chrome.tabs.get(tabId);
+    if (tab && tab.incognito) {
+      // AMO policy: do not store private browsing session data.
+      return;
+    }
+  } catch (_) {
+    /* tab may be gone */
+  }
+  try {
     let raw;
     try {
       raw = await captureVisibleTabP(windowId);
@@ -301,20 +310,45 @@ function connect() {
   connectAttempt = 0;
   console.info("NM connected", HOST);
   // Mandatory bind hello — host rejects unbound peers (PREP-002).
-  try {
-    port.postMessage({ type: "hello", browserId: detectBrowserId() });
-  } catch (e) {
-    console.warn("hello failed", e);
-    port = null;
-    scheduleReconnect("hello failed");
-  }
+  Promise.resolve(detectBrowserId())
+    .then((browserId) => {
+      if (!port) {
+        return;
+      }
+      try {
+        port.postMessage({ type: "hello", browserId });
+      } catch (e) {
+        console.warn("hello failed", e);
+        port = null;
+        scheduleReconnect("hello failed");
+      }
+    })
+    .catch((e) => {
+      console.warn("detectBrowserId failed", e);
+      port = null;
+      scheduleReconnect("detectBrowserId failed");
+    });
 }
 
 /** Registry id for NM bind; Brave-first UA heuristics (shared MV3 blast radius). */
-function detectBrowserId() {
-  // Optional install-staged file for Flatpak (or other) unpacked copies.
+async function detectBrowserId() {
+  // Optional install-staged file for Flatpak/Snap Temporary copies.
   if (typeof FORCED_BROWSER_ID === "string" && FORCED_BROWSER_ID) {
     return FORCED_BROWSER_ID;
+  }
+  // Durable Firefox AMO zip: optional override when Snap+deb+Flatpak run together.
+  try {
+    const got = await chrome.storage.local.get("alkitect.firefoxBrowserId");
+    const override = got && got["alkitect.firefoxBrowserId"];
+    if (
+      override === "firefox" ||
+      override === "firefox-deb" ||
+      override === "firefox-flatpak"
+    ) {
+      return override;
+    }
+  } catch (_) {
+    /* ignore */
   }
   try {
     if (navigator.brave && typeof navigator.brave.isBrave === "function") {
@@ -358,6 +392,7 @@ function detectBrowserId() {
     return "brave";
   }
   if (/Firefox\//.test(ua)) {
+    // One AMO-signed .xpi: default registry id firefox; Shell peer-fallback + storage override.
     return "firefox";
   }
   if (/Chromium\//.test(ua)) {
@@ -387,8 +422,9 @@ function onHostMessage(msg) {
         reply({ type: "list", tabs: [], error: err.message });
         return;
       }
-      const wins = windows || [];
-      // Prefer focused Brave window; else visible; else minimized (still list tabs).
+      // AMO policy: never list/store private browsing session data.
+      const wins = (windows || []).filter((w) => w && !w.incognito);
+      // Prefer focused window; else visible; else minimized (still list tabs).
       const win =
         wins.find((w) => w.focused) ||
         wins.find((w) => w.state !== "minimized") ||
@@ -397,7 +433,7 @@ function onHostMessage(msg) {
         reply({ type: "list", tabs: [] });
         return;
       }
-      const list = (win.tabs || []).filter((t) => t.id != null);
+      const list = (win.tabs || []).filter((t) => t.id != null && !t.incognito);
       (async () => {
         const active = list.find((t) => t.active);
         // captureVisibleTab fails while minimized — use cache only.
@@ -443,21 +479,32 @@ function onHostMessage(msg) {
       reply({ type: "activate", ok: false, error: "InvalidTab" });
       return;
     }
-    chrome.tabs.update(tabId, { active: true }, (tab) => {
-      const err = chrome.runtime.lastError;
-      if (err || !tab) {
-        reply({ type: "activate", ok: false, error: err?.message || "InvalidTab" });
+    chrome.tabs.get(tabId, (probe) => {
+      const getErr = chrome.runtime.lastError;
+      if (getErr || !probe || probe.incognito) {
+        reply({
+          type: "activate",
+          ok: false,
+          error: probe && probe.incognito ? "PrivateBrowsing" : getErr?.message || "InvalidTab",
+        });
         return;
       }
-      const done = () => {
-        reply({ type: "activate", ok: true });
-        setTimeout(() => captureThumb(tab.windowId, tab.id), 350);
-      };
-      if (tab.windowId != null) {
-        chrome.windows.update(tab.windowId, { focused: true }, done);
-      } else {
-        done();
-      }
+      chrome.tabs.update(tabId, { active: true }, (tab) => {
+        const err = chrome.runtime.lastError;
+        if (err || !tab) {
+          reply({ type: "activate", ok: false, error: err?.message || "InvalidTab" });
+          return;
+        }
+        const done = () => {
+          reply({ type: "activate", ok: true });
+          setTimeout(() => captureThumb(tab.windowId, tab.id), 350);
+        };
+        if (tab.windowId != null) {
+          chrome.windows.update(tab.windowId, { focused: true }, done);
+        } else {
+          done();
+        }
+      });
     });
     return;
   }

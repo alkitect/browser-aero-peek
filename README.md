@@ -15,7 +15,7 @@ Thumbnails are screenshots from the last time that tab was visible — Chromium 
 
 Dock **click** stays stock minimize-or-previews. Peek is hover-only.
 
-**At this tip (`v0.8.0`), the registry enables Chromium-family packaging variants (deb / Snap / Flatpak where listed), Microsoft Edge (deb + Flatpak), and Firefox (Snap + Mozilla `.deb` + Flatpak).** Tor Browser stays **Out** ([TOR-FEASIBILITY.md](docs/TOR-FEASIBILITY.md) FAIL). Live hover only works for packages you actually install.
+**At this tip (`v0.9.0`), the registry enables Chromium-family packaging variants (deb / Snap / Flatpak where listed), Microsoft Edge (deb + Flatpak), and Firefox (Snap + Mozilla `.deb` + Flatpak) with a durable AMO-signed add-on.** Tor Browser stays **Out** ([TOR-FEASIBILITY.md](docs/TOR-FEASIBILITY.md) FAIL). Live hover only works for packages you actually install.
 
 ## Who this is for
 
@@ -45,9 +45,9 @@ chmod +x scripts/*.sh
 | Edge **deb** | `edge://extensions` | staged `~/.local/share/alkitect-browser-tabs/mv3-edge/` |
 | Vivaldi **deb** | `vivaldi://extensions` | staged `mv3-vivaldi/` (forced id — reduced UA looks like Chrome) |
 | Snap / Flatpak Chromium-family | that browser’s extensions page | staged `mv3-<id>/` (remove portal `/run/…/doc/…` loads) |
-| Firefox Snap | `about:debugging#/runtime/this-firefox` | Temporary Add-on → **`~/snap/firefox/common/alkitect-mv3-firefox.xpi`** (`.xpi` not `manifest.json`; reloads after Firefox quit until AMO-signed durable follow-up) |
-| Firefox Mozilla `.deb` | same | Temporary Add-on → **`~/alkitect-browser-tabs/mv3-firefox-deb.xpi`** |
-| Firefox Flatpak | same | Temporary Add-on → **`~/alkitect-browser-tabs/mv3-firefox-flatpak.xpi`** |
+| Firefox Snap | `about:addons` | **Install Add-on From File** → `~/alkitect-browser-tabs/browser-tab-dock-signed.xpi` (AMO-signed; survives quit). Temporary fallback: `~/snap/firefox/common/alkitect-mv3-firefox.xpi` |
+| Firefox Mozilla `.deb` | same | Same durable `.xpi` (restart Firefox once after first install if NM was cold) |
+| Firefox Flatpak | same | Same durable `.xpi`; Shell peer-fallback maps dock → `firefox` NM peer |
 
 Confirm Chromium-family ID matches `browser-extension/extension-id.txt`. Fully quit/relaunch each browser, then `browser-tabs-host cli list --browser <id>`.
 
@@ -105,7 +105,7 @@ Three small pieces share tab state with the dock:
 
 Installed names: `browser-tabs-host`, `alkitect-browser-tabs.service`, Shell “Browser Aero Peek” (`browser-tab-dock@alkitect`, author: alkitect), browser add-on “Browser Tab Dock” (author: alkitect).
 
-Versions: MV3 `browser-extension/manifest.json` (git tags track this) · Shell `metadata.json` integer (GNOME scheme). Deeper reading: [ARCHITECTURE](docs/ARCHITECTURE.md) · [ADR-001](docs/architecture/ADR-001-ipc-and-dock-intercept.md) · [SECURITY](docs/SECURITY.md).
+Versions: MV3 `browser-extension/manifest.json` (git tags track this) · Shell `metadata.json` integer (GNOME scheme). Deeper reading: [ARCHITECTURE](docs/ARCHITECTURE.md) · [ADR-001](docs/architecture/ADR-001-ipc-and-dock-intercept.md) · [SECURITY](docs/SECURITY.md) · [Firefox AMO](docs/AMO-FIREFOX.md).
 
 ## Related
 

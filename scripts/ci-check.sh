@@ -84,18 +84,66 @@ grep -qF 'EXT_ID_PLACEHOLDER' "${tmpl}" \
 # Version triad: First public tag stays v0.2.9; current release must match MV3 + CHANGELOG
 grep -qF 'First public tag: v0.2.9' docs/PUBLISH.md \
   || { echo "ci-check: docs/PUBLISH.md must record First public tag: v0.2.9" >&2; exit 1; }
-grep -qF 'Current tag: v0.8.0' docs/PUBLISH.md \
-  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.8.0" >&2; exit 1; }
+grep -qF 'Current tag: v0.9.0' docs/PUBLISH.md \
+  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.9.0" >&2; exit 1; }
 python3 - <<'PY'
 import json, sys
 from pathlib import Path
 v = json.loads(Path("browser-extension/manifest.json").read_text())["version"]
-if v != "0.8.0":
-    print(f"ci-check: MV3 version {v!r} != 0.8.0", file=sys.stderr)
+if v != "0.9.0":
+    print(f"ci-check: MV3 version {v!r} != 0.9.0", file=sys.stderr)
     sys.exit(1)
 PY
-grep -qE '^## 0\.8\.0' CHANGELOG.md \
-  || { echo "ci-check: CHANGELOG missing ## 0.8.0" >&2; exit 1; }
+grep -qE '^## 0\.9\.0' CHANGELOG.md \
+  || { echo "ci-check: CHANGELOG missing ## 0.9.0" >&2; exit 1; }
+
+# Firefox AMO stage tree (FF140+ consent; no Chromium key in dist)
+bash -n scripts/stage-firefox-amo.sh
+bash -n scripts/amo-keyring.sh
+bash -n scripts/amo-sign.sh
+./scripts/stage-firefox-amo.sh
+python3 - <<'PY'
+import json, sys
+from pathlib import Path
+m = json.loads(Path("dist/firefox-amo/manifest.json").read_text())
+gecko = (m.get("browser_specific_settings") or {}).get("gecko") or {}
+if gecko.get("strict_min_version") != "140.0":
+    print(f"ci-check: firefox-amo strict_min_version {gecko.get('strict_min_version')!r} != '140.0'", file=sys.stderr)
+    sys.exit(1)
+dcp = gecko.get("data_collection_permissions") or {}
+req = set(dcp.get("required") or [])
+if req != {"browsingActivity", "websiteContent"}:
+    print(f"ci-check: firefox-amo data_collection_permissions.required unexpected: {sorted(req)}", file=sys.stderr)
+    sys.exit(1)
+if "key" in m:
+    print("ci-check: firefox-amo must not include Chromium key", file=sys.stderr)
+    sys.exit(1)
+if "favicon" in (m.get("permissions") or []):
+    print("ci-check: firefox-amo must not declare favicon permission", file=sys.stderr)
+    sys.exit(1)
+bg = m.get("background") or {}
+if "service_worker" in bg or "background.js" not in (bg.get("scripts") or []):
+    print(f"ci-check: firefox-amo background unexpected: {bg!r}", file=sys.stderr)
+    sys.exit(1)
+if not Path("dist/firefox-amo/background.js").is_file():
+    print("ci-check: firefox-amo missing background.js", file=sys.stderr)
+    sys.exit(1)
+if Path("dist/firefox-amo/forced-browser-id.js").exists():
+    print("ci-check: firefox-amo must not ship forced-browser-id.js", file=sys.stderr)
+    sys.exit(1)
+ff_id = Path("browser-extension/firefox-extension-id.txt").read_text().strip()
+if gecko.get("id") != ff_id:
+    print(f"ci-check: firefox-amo gecko.id {gecko.get('id')!r} != {ff_id!r}", file=sys.stderr)
+    sys.exit(1)
+# Chromium shared tree must keep its key (unchanged lane).
+shared = json.loads(Path("browser-extension/manifest.json").read_text())
+if "key" not in shared:
+    print("ci-check: shared browser-extension manifest lost Chromium key", file=sys.stderr)
+    sys.exit(1)
+print("ci-check: firefox-amo stage OK")
+PY
+grep -qF 'incognito' browser-extension/background.js \
+  || { echo "ci-check: background.js must skip/store-guard private browsing (incognito)" >&2; exit 1; }
 
 # Absolute home paths (any username) must not appear in shipped sources.
 # Encoded so this script does not embed a concrete account name.

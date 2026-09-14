@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Browser Tab Dock",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "author": "alkitect",
   "description": "Linux/Ubuntu Dock: browser tab titles, favicons, and cached thumbnails for GNOME Aero-peek-style hover (Brave + Chrome + Opera + Firefox). Author: alkitect.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwOKVc23qHyfOBAml6cn2m8RmO1iSBk9aHDDlpdh6G7kIB0WjQVnBMYTN6v31L32B1+cDOV7qZw+eYNqF7QP+ez4RHysZF7h3XzQT/dQhNGg9vUnd3f0jK7tRwtlz2qlL5wVZeTwOdemnuxPkOyIM/apiQAJEc3ZgZs/N+rg1oC2mqJpkxcmSZ3RXp1MjWrk+ktJLM719CHQ8upVtb+0mEesn0tbmnpzaUaO09CMZuf1aB82gUHZlx27AnYLsAEV/iYZqiM4CQts4UKcI3qhm8fGaF79kwOjkpgHN0UIu7oAFsOUL9OMrx08EhRx8RvCoWT7tUN+WgjyvDqsw6q+NCQIDAQAB",

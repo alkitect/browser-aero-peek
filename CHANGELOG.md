@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.0
+
+- Firefox durable: AMO self-distributed signed `.xpi` (FF140+ `data_collection_permissions`); `stage-firefox-amo` / `amo-keyring` / `amo-sign`; install prefers `~/alkitect-browser-tabs/browser-tab-dock-signed.xpi`; private browsing excluded from list/thumb cache.
+- Shell **21**: peer-fallback tries all Firefox packaging siblings so Flatpak/deb dock icons work with the single durable NM peer (`firefox`).
+
 ## 0.8.0
 
 - Enable Firefox Mozilla `.deb` (`firefox-deb`) and Flatpak `org.mozilla.firefox` (`firefox-flatpak`): shared portal NM `~/.mozilla/…` + home-sock bridge; per-lane Temporary `.xpi`; Shell family matcher (metadata **20**).
@@ -42,8 +47,7 @@
 ## 0.2.10
 
 - Shared-prep: `config/browsers.json` SSOT; host multiplex + bind hello; D-Bus/CLI scoped by `--browser`; Shell table matcher; multi-NM ci (enabled positive / disabled absent); BROWSER-SUPPORT + concurrent-browser SECURITY/ADR notes.
-- Brave remains the only `enabled` browser; CLI: `browser-tabs-host cli list --browser brave`.
 
 ## 0.2.9
 
-- First public tag of the multi-browser release-source fork (cutover from Brave-only lineage).
+- First public multi-browser release-source tag (Brave-capable tip at cutover).

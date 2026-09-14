@@ -5,3 +5,5 @@ manifest-key.txt
 __pycache__/
 *.pyc
 .DS_Store
+# Staged / signed Firefox AMO artifacts (regenerate with scripts/stage-firefox-amo.sh)
+/dist/

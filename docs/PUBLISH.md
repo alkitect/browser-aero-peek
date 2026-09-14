@@ -8,7 +8,7 @@ README variant: B
 
 **First public tag: v0.2.9**
 
-**Current tag: v0.8.0**
+**Current tag: v0.9.0**
 
 **V-001 count (organic, not invent / not copy):**
 
@@ -26,16 +26,17 @@ README variant: B
 | `v0.6.1` | Docs: deprecate Brave-only sibling lane pointers — **patch** |
 | `v0.7.0` | Firefox Snap (mozilla NM + Temporary `.xpi`) + Edge/packaging registry batch + Shell 19 thumb fade — **minor** |
 | `v0.8.0` | Firefox Mozilla `.deb` + Flatpak (`firefox-deb` / `firefox-flatpak`) + Shell 20 family matcher — **minor** |
+| `v0.9.0` | Firefox durable AMO-signed `.xpi` + Shell 21 sibling peer-fallback — **minor** |
 
-Version triad (current): PUBLISH `Current tag: v0.8.0` · MV3 `0.8.0` · CHANGELOG `## 0.8.0`. First public tag line stays `v0.2.9`.
+Version triad (current): PUBLISH `Current tag: v0.9.0` · MV3 `0.9.0` · CHANGELOG `## 0.9.0`. First public tag line stays `v0.2.9`.
 
 Never copy another alkitect repo’s tag. Use `RC-BEFORE-1.0` in this file only for an intentional 0.9.x RC.
 
 ```bash
 ./scripts/ci-check.sh
-git tag -a v0.8.0 -m "v0.8.0"
+git tag -a v0.9.0 -m "v0.9.0"
 git push origin main
-git push origin v0.8.0
+git push origin v0.9.0
 ```
 
 Repo URL: `https://github.com/alkitect/browser-aero-peek`
@@ -67,16 +68,16 @@ Priority order (**2026-09-13** — Linux-share for uncovered browsers first, the
 3. Opera `.deb` + Flatpak — **supported** (`v0.4.0`)
 4. Vivaldi `.deb` — **supported** (`v0.5.0`)
 5. Chromium Snap — **supported** (`v0.6.0`)
-6. Firefox Snap — **supported** (`v0.7.0`; Temporary `.xpi`; durable AMO follow-up)
+6. Firefox Snap — **supported** (`v0.7.0+`; durable AMO `.xpi` from `v0.9.0`)
 7. Edge + packaging expansions — **registry In** (`v0.7.0`; live HV when installed)
-8. Firefox Mozilla `.deb` + Flatpak — **supported** (`v0.8.0`; Temporary `.xpi` per lane)
+8. Firefox Mozilla `.deb` + Flatpak — **supported** (`v0.8.0+`; durable from `v0.9.0`)
 9. Tor Browser — **Out** ([TOR-FEASIBILITY.md](TOR-FEASIBILITY.md) FAIL)
-10. Firefox durable (AMO-signed `.xpi`) — **next**
+10. Firefox durable (AMO-signed `.xpi`) — **supported** (`v0.9.0`; see [AMO-FIREFOX.md](AMO-FIREFOX.md))
 11. GNOME Web — **Out**
 
 ## Human gate
 
-Published through **v0.8.0** (Firefox Snap + Mozilla `.deb` + Flatpak Temporary `.xpi`; Shell 20). Next: **FIREFOX-DURABLE** (AMO-signed persistent `.xpi`).
+Published through **v0.9.0** (Firefox durable AMO-signed `.xpi` + Shell 21). Signed WebExt add-on version inside the `.xpi` may lag the product triad until the next AMO re-sign.
 
 ## GitHub About
 

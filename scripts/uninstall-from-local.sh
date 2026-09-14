@@ -25,6 +25,7 @@ rm -rf "${CFG_DIR}"
 rm -rf "${SHARE_DIR}"/mv3-*
 rm -rf "${HOME}/alkitect-browser-tabs"/mv3-firefox*
 rm -f "${HOME}/alkitect-browser-tabs"/mv3-firefox*.xpi
+rm -f "${HOME}/alkitect-browser-tabs/browser-tab-dock-signed.xpi"
 rm -rf "${HOME}/snap/firefox/common/alkitect-mv3-firefox"
 rm -f "${HOME}/snap/firefox/common/alkitect-mv3-firefox.xpi"
 rm -f "${HOME}/bin/browser-tabs-nm-snap"

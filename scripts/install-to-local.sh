@@ -274,6 +274,34 @@ for app in dict.fromkeys(grants):
 PY
 fi
 
+# Prefer Mozilla-signed durable .xpi when present (AMO self-dist / GitHub Release asset).
+# Does not download; copies from dist/firefox-amo-signed/ or existing home copy.
+python3 - <<'PY'
+import shutil
+from pathlib import Path
+
+root = Path("${ROOT}")
+home = Path.home()
+dest = home / "alkitect-browser-tabs" / "browser-tab-dock-signed.xpi"
+candidates = []
+env = __import__("os").environ.get("ALKITECT_FIREFOX_SIGNED_XPI", "").strip()
+if env:
+    candidates.append(Path(env).expanduser())
+candidates.append(dest)
+candidates.extend(sorted((root / "dist" / "firefox-amo-signed").glob("*.xpi")))
+src = next((p for p in candidates if p.is_file()), None)
+if src is None:
+    print("install: no signed Firefox .xpi nearby — Temporary Add-on fallback still staged")
+    print("         durable: download release asset or run ./scripts/amo-sign.sh (see docs/AMO-FIREFOX.md)")
+else:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if src.resolve() != dest.resolve():
+        shutil.copy2(src, dest)
+    print(f"Staged durable Firefox .xpi: {dest}")
+    print("  about:addons → gear → Install Add-on From File → that path (Snap/deb/Flatpak)")
+    print("  Survives Firefox quit. Temporary forced-id .xpi remains available as fallback.")
+PY
+
 # Stage Temporary Add-on .xpi per enabled mozilla lane (Snap needs non-hidden snap-common path).
 python3 - <<PY
 import json, shutil, zipfile
@@ -405,18 +433,28 @@ for e in data["browsers"]:
     pkg = e.get("packaging", "native")
     staged = share / f"mv3-{bid}"
     if e.get("nm_schema") == "mozilla":
+        durable = Path.home() / "alkitect-browser-tabs" / "browser-tab-dock-signed.xpi"
         home_xpi = Path.home() / "alkitect-browser-tabs" / f"mv3-{bid}.xpi"
         if e.get("packaging") == "snap":
             snap_xpi = Path.home() / "snap/firefox/common/alkitect-mv3-firefox.xpi"
-            xpi = snap_xpi if snap_xpi.is_file() else home_xpi
+            temp_xpi = snap_xpi if snap_xpi.is_file() else home_xpi
         else:
-            xpi = home_xpi
-        print(f"  {bid} ({pkg}): about:debugging → Load Temporary Add-on → {xpi}")
-        print("       IMPORTANT: load the .xpi (not manifest.json). Snap/Flatpak portals often expose only one file;")
-        print("       a folder/manifest pick yields Location /run/user/*/doc/… with no background.js.")
-        print(f"       gecko id browser-tab-dock@alkitect; forced browserId={bid}; portal NM ~/.mozilla")
-        print("       Temporary add-ons unload when Firefox quits — reload .xpi after every restart")
-        print(f"       Then: browser-tabs-host cli list --browser {bid}  (must show tabs before hover works)")
+            temp_xpi = home_xpi
+        if durable.is_file():
+            print(f"  {bid} ({pkg}): about:addons → Install Add-on From File → {durable}")
+            print("       Mozilla-signed durable .xpi (survives quit); hello browserId defaults to firefox;")
+            print("       Shell peer-fallback maps Flatpak/deb dock icons; optional storage.local")
+            print("       alkitect.firefoxBrowserId for concurrent packaging")
+            print(f"       Then: browser-tabs-host cli list --browser {bid}  (or firefox)")
+            print(f"       Fallback Temporary: {temp_xpi}")
+        else:
+            print(f"  {bid} ({pkg}): about:debugging → Load Temporary Add-on → {temp_xpi}")
+            print("       IMPORTANT: load the .xpi (not manifest.json). Snap/Flatpak portals often expose only one file;")
+            print("       a folder/manifest pick yields Location /run/user/*/doc/… with no background.js.")
+            print(f"       gecko id browser-tab-dock@alkitect; forced browserId={bid}; portal NM ~/.mozilla")
+            print("       Temporary add-ons unload when Firefox quits — reload .xpi after every restart")
+            print("       Durable: docs/AMO-FIREFOX.md + ./scripts/amo-sign.sh / GitHub Release asset")
+            print(f"       Then: browser-tabs-host cli list --browser {bid}  (must show tabs before hover works)")
     elif staged.is_dir():
         print(f"  {bid} ({pkg}): extensions → Load unpacked → {staged}")
         print(f"       forced hello browserId={bid}; same Chromium extension ID {ext_id}")

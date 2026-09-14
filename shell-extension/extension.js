@@ -460,20 +460,28 @@ function _matchBrowserApp(app) {
     return null;
 }
 
-/** Sibling registry id when GNOME merges packaging variants under one StartupWMClass. */
-function _peerFallback(browserId) {
+/** Sibling registry ids when GNOME merges packaging variants (or one durable NM peer). */
+function _peerSiblings(browserId) {
     const families = {
         opera: ['opera', 'opera-flatpak', 'opera-snap'],
         brave: ['brave', 'brave-flatpak', 'brave-snap'],
         vivaldi: ['vivaldi', 'vivaldi-flatpak', 'vivaldi-snap'],
+        // Durable AMO .xpi hellos as firefox — prefer that peer when dock matches deb/Flatpak.
         firefox: ['firefox', 'firefox-flatpak', 'firefox-deb'],
     };
     for (const peers of Object.values(families)) {
         const i = peers.indexOf(browserId);
-        if (i >= 0)
-            return peers[(i + 1) % peers.length];
+        if (i < 0)
+            continue;
+        const rest = peers.filter(p => p !== browserId);
+        if (browserId === 'firefox-flatpak' || browserId === 'firefox-deb') {
+            const canon = rest.filter(p => p === 'firefox');
+            const other = rest.filter(p => p !== 'firefox');
+            return canon.concat(other);
+        }
+        return rest;
     }
-    return null;
+    return [];
 }
 
 /** Include minimized windows (dock getInterestingWindows is fine, but be explicit). */
@@ -900,7 +908,7 @@ class Extension {
         this._startListTabs(icon, browserId);
     }
 
-    _startListTabs(icon, browserId, retried) {
+    _startListTabs(icon, browserId, siblingQueue) {
         this._listInFlight.set(browserId, true);
         let proxy;
         try {
@@ -928,10 +936,15 @@ class Extension {
                     this._showPeekStrip(tabs, icon, browserId);
             } catch (e) {
                 const msg = String(e);
-                const alt = !retried ? _peerFallback(browserId) : null;
+                let queue = siblingQueue;
+                if (queue === undefined)
+                    queue = _peerSiblings(browserId).slice();
+                else
+                    queue = queue.slice();
+                const alt = queue.length ? queue.shift() : null;
                 if (alt && msg.indexOf('NoExtension') !== -1 && !this._listInFlight.get(alt)) {
                     log(`${Me.metadata.uuid}: ListTabs ${browserId} NoExtension — retry ${alt}`);
-                    this._startListTabs(icon, alt, true);
+                    this._startListTabs(icon, alt, queue);
                     return;
                 }
                 this._clearPendingShow();
