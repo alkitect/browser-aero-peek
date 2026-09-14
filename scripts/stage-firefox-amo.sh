@@ -39,7 +39,12 @@ out = {
                 # Native messaging to local host — counts as transmission outside the add-on.
                 "required": ["browsingActivity", "websiteContent"],
             },
-        }
+        },
+        # Built-in consent landed on Android in 142; without this override the linter
+        # inherits gecko 140 and warns KEY_FIREFOX_ANDROID_UNSUPPORTED_BY_MIN_VERSION.
+        "gecko_android": {
+            "strict_min_version": "142.0",
+        },
     },
     "permissions": [
         p for p in (src.get("permissions") or [])
@@ -53,6 +58,6 @@ out = {
 assert "key" not in out
 Path("${OUT}/manifest.json").write_text(json.dumps(out, indent=2) + "\n")
 print(f"Staged Firefox AMO tree: ${OUT}")
-print(f"  gecko.id={ff_id} strict_min_version=140.0")
+print(f"  gecko.id={ff_id} strict_min_version=140.0 gecko_android=142.0")
 print("  data_collection_permissions.required=[browsingActivity, websiteContent]")
 PY

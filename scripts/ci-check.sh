@@ -84,20 +84,20 @@ grep -qF 'EXT_ID_PLACEHOLDER' "${tmpl}" \
 # Version triad: First public tag stays v0.2.9; current release must match MV3 + CHANGELOG
 grep -qF 'First public tag: v0.2.9' docs/PUBLISH.md \
   || { echo "ci-check: docs/PUBLISH.md must record First public tag: v0.2.9" >&2; exit 1; }
-grep -qF 'Current tag: v0.9.1' docs/PUBLISH.md \
-  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.9.1" >&2; exit 1; }
+grep -qF 'Current tag: v0.9.3' docs/PUBLISH.md \
+  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.9.3" >&2; exit 1; }
 python3 - <<'PY'
 import json, sys
 from pathlib import Path
 v = json.loads(Path("browser-extension/manifest.json").read_text())["version"]
-if v != "0.9.1":
-    print(f"ci-check: MV3 version {v!r} != 0.9.1", file=sys.stderr)
+if v != "0.9.3":
+    print(f"ci-check: MV3 version {v!r} != 0.9.3", file=sys.stderr)
     sys.exit(1)
 PY
-grep -qE '^## 0\.9\.1' CHANGELOG.md \
-  || { echo "ci-check: CHANGELOG missing ## 0.9.1" >&2; exit 1; }
+grep -qE '^## 0\.9\.3' CHANGELOG.md \
+  || { echo "ci-check: CHANGELOG missing ## 0.9.3" >&2; exit 1; }
 
-# Firefox AMO stage tree (FF140+ consent; no Chromium key in dist)
+# Firefox AMO stage tree (FF140+/Android142 consent; no Chromium key in dist)
 bash -n scripts/stage-firefox-amo.sh
 bash -n scripts/amo-keyring.sh
 bash -n scripts/amo-sign.sh
@@ -106,9 +106,14 @@ python3 - <<'PY'
 import json, sys
 from pathlib import Path
 m = json.loads(Path("dist/firefox-amo/manifest.json").read_text())
-gecko = (m.get("browser_specific_settings") or {}).get("gecko") or {}
+bss = m.get("browser_specific_settings") or {}
+gecko = bss.get("gecko") or {}
+g_android = bss.get("gecko_android") or {}
 if gecko.get("strict_min_version") != "140.0":
     print(f"ci-check: firefox-amo strict_min_version {gecko.get('strict_min_version')!r} != '140.0'", file=sys.stderr)
+    sys.exit(1)
+if g_android.get("strict_min_version") != "142.0":
+    print(f"ci-check: firefox-amo gecko_android.strict_min_version {g_android.get('strict_min_version')!r} != '142.0'", file=sys.stderr)
     sys.exit(1)
 dcp = gecko.get("data_collection_permissions") or {}
 req = set(dcp.get("required") or [])

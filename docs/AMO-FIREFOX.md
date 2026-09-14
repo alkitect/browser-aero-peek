@@ -23,7 +23,8 @@ Staged tree: `dist/firefox-amo/`
 | Item | Value |
 |------|--------|
 | Gecko id | `browser-tab-dock@alkitect` |
-| `strict_min_version` | `140.0` (built-in data consent) |
+| `strict_min_version` (gecko) | `140.0` (desktop built-in data consent) |
+| `strict_min_version` (gecko_android) | `142.0` (Android consent support; clears AMO linter warning) |
 | `data_collection_permissions.required` | `browsingActivity`, `websiteContent` |
 | Background | `background.scripts` (no `service_worker`) |
 | Absent | Chromium `key`, `favicon` permission, `forced-browser-id.js` |
@@ -56,6 +57,8 @@ Do **not** put JWT issuer/secret in `.env` / plaintext files. Store them in the 
 `Waiting for validation…` / `Waiting for approval…` means AMO is processing — **no terminal input**. When done you’ll see `Signed xpi downloaded: …`. You can also open https://addons.mozilla.org/developers/ and download from the Hub. Typing `y` does nothing.
 
 If a previous run exposed credentials in `ps` (argv), **revoke/regenerate** the JWT at https://addons.mozilla.org/developers/addon/api/key/ then `./scripts/amo-keyring.sh clear && ./scripts/amo-keyring.sh store`.
+
+`Error decoding signature` / Unauthorized on upload usually means a bad secret (often a **trailing space** from paste). `amo-sign.sh` trims Keyring values; re-`store` if trim alone does not help.
 
 Keyring attributes: `service=alkitect-browser-aero-peek`, keys `amo-jwt-issuer` / `amo-jwt-secret`.
 

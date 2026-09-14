@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.3
+
+- Clear AMO Android min-version warning: set `gecko_android.strict_min_version` to `142.0` (desktop stays `140.0` for built-in data consent).
+- Re-sign durable Firefox `.xpi` as 0.9.3 (Hub already had 0.9.2).
+
+## 0.9.2
+
+- AMO re-sign durable Firefox `.xpi` so the signed add-on version matches the product triad (attach `browser-tab-dock-signed.xpi` on the GitHub Release).
+- `amo-sign.sh`: trim whitespace from Keyring JWT values (trailing space caused AMO `Error decoding signature`).
+
 ## 0.9.1
 
 - Fix install durable `.xpi` discovery (`ROOT` expansion) so `dist/firefox-amo-signed/*.xpi` is copied to `~/alkitect-browser-tabs/browser-tab-dock-signed.xpi`.

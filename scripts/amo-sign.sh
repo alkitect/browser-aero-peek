@@ -20,6 +20,11 @@ fi
 
 issuer="$(secret-tool lookup service "${SERVICE}" key "${KEY_ISSUER}" 2>/dev/null || true)"
 secret="$(secret-tool lookup service "${SERVICE}" key "${KEY_SECRET}" 2>/dev/null || true)"
+# Keyring paste often leaves a trailing space; JWT HS256 then fails with "Error decoding signature".
+issuer="${issuer%"${issuer##*[![:space:]]}"}"
+secret="${secret%"${secret##*[![:space:]]}"}"
+issuer="${issuer#"${issuer%%[![:space:]]*}"}"
+secret="${secret#"${secret%%[![:space:]]*}"}"
 if [[ -z "${issuer}" || -z "${secret}" ]]; then
   echo "AMO JWT not in GNOME Keyring. Store once:" >&2
   echo "  ${ROOT}/scripts/amo-keyring.sh store" >&2
