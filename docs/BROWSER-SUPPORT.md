@@ -2,7 +2,7 @@
 
 Release-source matrix for **browser-aero-peek**. Runtime enablement is controlled by `config/browsers.json` (`enabled: true|false`). This document is the human-facing In/Out view.
 
-## At this tip (`v0.9.1`)
+## At this tip (`v0.9.4`)
 
 | Browser | Packaging | Status | Notes |
 |---------|-----------|--------|--------|
@@ -26,6 +26,14 @@ Release-source matrix for **browser-aero-peek**. Runtime enablement is controlle
 | **Tor Browser** | — | **Out** | [TOR-FEASIBILITY.md](TOR-FEASIBILITY.md) **FAIL** — stay `enabled: false` |
 | GNOME Web | — | **Out** | Not planned |
 
+### Official packaging N/A (not gaps)
+
+| Browser | Channel | Why |
+|---------|---------|-----|
+| Google Chrome | Snap | Google does not publish a Chrome Snap (`snap info google-chrome` → none). Chromium Snap is the Canonical Snap browser. |
+| Chromium | Ubuntu `.deb` | `chromium-browser` is transitional → installs the Chromium **Snap**. No real Ubuntu Chromium `.deb` app. |
+| Microsoft Edge | Snap | Microsoft does not publish Edge on Snapcraft; official Linux = `.deb` / `.rpm` (+ community Flatpak). |
+
 ## Enabled vs disabled
 
 - **Enabled:** install writes Native Messaging JSON under that browser’s profile-relative `nm_path` (and aliases) with schema-correct allowlists (Chromium `allowed_origins` or Mozilla `allowed_extensions`). `nm_base` is `xdg_config` or `home` (Flatpak `.var/...` / Snap `snap/...`).
@@ -48,9 +56,8 @@ Shell matchers put Flatpak/Snap before native when WM classes overlap (Opera / B
 
 | Item | Notes |
 |------|--------|
-| Firefox durable install | Stage `./scripts/stage-firefox-amo.sh` → AMO **On your own** sign ([AMO-FIREFOX.md](AMO-FIREFOX.md)); FF140+; same gecko id |
-| Firefox `.deb` / Flatpak | `FIREFOX-PKG-EXPAND` after Snap lane |
 | Edge / packaging live HV | Only when that package is installed; registry already In |
+| Optional product expansions | Opera GX Snap/Flatpak; vendor beta/dev/nightly channels; Debian Chromium `.deb`; RPM host verify (see research / plan backlog) — not Ubuntu stable-channel N/A cells |
 
 ## See also
 

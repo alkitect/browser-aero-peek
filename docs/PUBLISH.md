@@ -8,7 +8,7 @@ README variant: B
 
 **First public tag: v0.2.9**
 
-**Current tag: v0.9.3**
+**Current tag: v0.9.4**
 
 **V-001 count (organic, not invent / not copy):**
 
@@ -29,17 +29,18 @@ README variant: B
 | `v0.9.0` | Firefox durable AMO-signed `.xpi` + Shell 21 sibling peer-fallback — **minor** |
 | `v0.9.1` | Fix durable `.xpi` install path discovery — **patch** |
 | `v0.9.2` | AMO re-sign durable Firefox `.xpi` to match product triad — **patch** |
+| `v0.9.4` | Docs: packaging N/A matrix (Chrome Snap / Ubuntu Chromium deb / Edge Snap) + beta Out — **patch** |
 | `v0.9.3` | Clear AMO Android `data_collection_permissions` min-version warning (`gecko_android` 142) — **patch** |
 
-Version triad (current): PUBLISH `Current tag: v0.9.3` · MV3 `0.9.3` · CHANGELOG `## 0.9.3`. First public tag line stays `v0.2.9`.
+Version triad (current): PUBLISH `Current tag: v0.9.4` · MV3 `0.9.4` · CHANGELOG `## 0.9.4`. First public tag line stays `v0.2.9`.
 
 Never copy another alkitect repo’s tag. Use `RC-BEFORE-1.0` in this file only for an intentional 0.9.x RC.
 
 ```bash
 ./scripts/ci-check.sh
-git tag -a v0.9.3 -m "v0.9.3"
+git tag -a v0.9.4 -m "v0.9.4"
 git push origin main
-git push origin v0.9.3
+git push origin v0.9.4
 ```
 
 Repo URL: `https://github.com/alkitect/browser-aero-peek`
@@ -80,7 +81,7 @@ Priority order (**2026-09-13** — Linux-share for uncovered browsers first, the
 
 ## Human gate
 
-Published through **v0.9.3** (AMO Android min-version warning cleared; prior tip v0.9.2 AMO re-sign sync).
+Published through **v0.9.4** (AMO Android min-version warning cleared; prior tip v0.9.2 AMO re-sign sync).
 
 ## GitHub About
 

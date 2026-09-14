@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.4
+
+- Docs: packaging coverage N/A table (Chrome Snap / Ubuntu Chromium `.deb` / Edge Snap) and beta/channel Out follow-ups.
+- Durable AMO-signed `.xpi` remains **0.9.3** (no resign for docs-only tip).
+
 ## 0.9.3
 
 - Clear AMO Android min-version warning: set `gecko_android.strict_min_version` to `142.0` (desktop stays `140.0` for built-in data consent).

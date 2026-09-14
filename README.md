@@ -15,7 +15,7 @@ Thumbnails are screenshots from the last time that tab was visible — Chromium 
 
 Dock **click** stays stock minimize-or-previews. Peek is hover-only.
 
-**At this tip (`v0.9.1`), the registry enables Chromium-family packaging variants (deb / Snap / Flatpak where listed), Microsoft Edge (deb + Flatpak), and Firefox (Snap + Mozilla `.deb` + Flatpak) with a durable AMO-signed add-on.** Tor Browser stays **Out** ([TOR-FEASIBILITY.md](docs/TOR-FEASIBILITY.md) FAIL). Live hover only works for packages you actually install.
+**At this tip (`v0.9.4`), the registry enables Chromium-family packaging variants (deb / Snap / Flatpak where listed), Microsoft Edge (deb + Flatpak), and Firefox (Snap + Mozilla `.deb` + Flatpak) with a durable AMO-signed add-on.** Tor Browser stays **Out** ([TOR-FEASIBILITY.md](docs/TOR-FEASIBILITY.md) FAIL). Live hover only works for packages you actually install.
 
 ## Who this is for
 

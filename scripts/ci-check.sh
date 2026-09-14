@@ -84,18 +84,18 @@ grep -qF 'EXT_ID_PLACEHOLDER' "${tmpl}" \
 # Version triad: First public tag stays v0.2.9; current release must match MV3 + CHANGELOG
 grep -qF 'First public tag: v0.2.9' docs/PUBLISH.md \
   || { echo "ci-check: docs/PUBLISH.md must record First public tag: v0.2.9" >&2; exit 1; }
-grep -qF 'Current tag: v0.9.3' docs/PUBLISH.md \
-  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.9.3" >&2; exit 1; }
+grep -qF 'Current tag: v0.9.4' docs/PUBLISH.md \
+  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.9.4" >&2; exit 1; }
 python3 - <<'PY'
 import json, sys
 from pathlib import Path
 v = json.loads(Path("browser-extension/manifest.json").read_text())["version"]
-if v != "0.9.3":
-    print(f"ci-check: MV3 version {v!r} != 0.9.3", file=sys.stderr)
+if v != "0.9.4":
+    print(f"ci-check: MV3 version {v!r} != 0.9.4", file=sys.stderr)
     sys.exit(1)
 PY
 grep -qE '^## 0\.9\.3' CHANGELOG.md \
-  || { echo "ci-check: CHANGELOG missing ## 0.9.3" >&2; exit 1; }
+  || { echo "ci-check: CHANGELOG missing ## 0.9.4" >&2; exit 1; }
 
 # Firefox AMO stage tree (FF140+/Android142 consent; no Chromium key in dist)
 bash -n scripts/stage-firefox-amo.sh
