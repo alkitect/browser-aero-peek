@@ -84,18 +84,18 @@ grep -qF 'EXT_ID_PLACEHOLDER' "${tmpl}" \
 # Version triad: First public tag stays v0.2.9; current release must match MV3 + CHANGELOG
 grep -qF 'First public tag: v0.2.9' docs/PUBLISH.md \
   || { echo "ci-check: docs/PUBLISH.md must record First public tag: v0.2.9" >&2; exit 1; }
-grep -qF 'Current tag: v0.9.4' docs/PUBLISH.md \
-  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.9.4" >&2; exit 1; }
+grep -qF 'Current tag: v0.10.0' docs/PUBLISH.md \
+  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.10.0" >&2; exit 1; }
 python3 - <<'PY'
 import json, sys
 from pathlib import Path
 v = json.loads(Path("browser-extension/manifest.json").read_text())["version"]
-if v != "0.9.4":
-    print(f"ci-check: MV3 version {v!r} != 0.9.4", file=sys.stderr)
+if v != "0.10.0":
+    print(f"ci-check: MV3 version {v!r} != 0.10.0", file=sys.stderr)
     sys.exit(1)
 PY
 grep -qE '^## 0\.9\.3' CHANGELOG.md \
-  || { echo "ci-check: CHANGELOG missing ## 0.9.4" >&2; exit 1; }
+  || { echo "ci-check: CHANGELOG missing ## 0.10.0" >&2; exit 1; }
 
 # Firefox AMO stage tree (FF140+/Android142 consent; no Chromium key in dist)
 bash -n scripts/stage-firefox-amo.sh
@@ -257,6 +257,25 @@ for e in browsers:
         if e.get("packaging") != "snap":
             print("ci-check: chromium packaging must be snap for this wave", file=sys.stderr)
             sys.exit(1)
+        for alias in e.get("nm_path_aliases") or []:
+            if "chromium/NativeMessagingHosts" in alias.replace("\\", "/"):
+                print("ci-check: chromium snap must not alias .config/chromium (owned by chromium-deb)", file=sys.stderr)
+                sys.exit(1)
+    if bid == "chromium-deb":
+        if e.get("packaging") != "deb":
+            print("ci-check: chromium-deb packaging must be deb", file=sys.stderr)
+            sys.exit(1)
+        if e.get("nm_base") != "xdg_config" or e.get("nm_path") != "chromium/NativeMessagingHosts":
+            print("ci-check: chromium-deb must use xdg_config chromium/NativeMessagingHosts", file=sys.stderr)
+            sys.exit(1)
+    if bid.startswith("opera-gx"):
+        want_pkg = {"opera-gx": "deb", "opera-gx-snap": "snap", "opera-gx-flatpak": "flatpak"}
+        if bid in want_pkg and e.get("packaging") != want_pkg[bid]:
+            print(f"ci-check: {bid} packaging must be {want_pkg[bid]!r}", file=sys.stderr)
+            sys.exit(1)
+        if e.get("family") != "opera-gx":
+            print(f"ci-check: {bid} family must be opera-gx", file=sys.stderr)
+            sys.exit(1)
     if e.get("enabled"):
         enabled.append(bid)
 # Tor stays fail-closed (TOR-FEASIBILITY FAIL) — must remain disabled.
@@ -268,8 +287,9 @@ want = [
     "brave", "brave-snap", "brave-flatpak",
     "chrome", "chrome-flatpak",
     "opera", "opera-flatpak", "opera-snap",
+    "opera-gx-flatpak", "opera-gx-snap", "opera-gx",
     "vivaldi", "vivaldi-snap", "vivaldi-flatpak",
-    "chromium", "chromium-flatpak",
+    "chromium", "chromium-deb", "chromium-flatpak",
     "edge", "edge-flatpak",
     "firefox-flatpak", "firefox", "firefox-deb",
 ]
@@ -361,7 +381,7 @@ def needs_stage(entry):
         return True
     if entry.get("packaging") in ("snap", "flatpak"):
         return True
-    if entry["id"] in ("vivaldi", "edge"):
+    if entry["id"] in ("vivaldi", "edge", "opera-gx", "chromium-deb"):
         return True
     return False
 

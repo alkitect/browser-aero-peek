@@ -110,6 +110,48 @@
       "wm_classes": ["opera", "Opera"]
     },
     {
+      "id": "opera-gx-flatpak",
+      "family": "opera-gx",
+      "packaging": "flatpak",
+      "enabled": true,
+      "nm_schema": "chromium",
+      "nm_base": "home",
+      "nm_path": ".var/app/com.opera.opera-gx/config/opera/NativeMessagingHosts",
+      "nm_path_aliases": [
+        ".var/app/com.opera.opera-gx/config/google-chrome/NativeMessagingHosts"
+      ],
+      "desktop_ids": ["com.opera.opera-gx.desktop"],
+      "wm_classes": [],
+      "flatpak_id": "com.opera.opera-gx",
+      "flatpak_filesystem": [
+        "~/.local/bin:ro",
+        "~/.local/share/alkitect-browser-tabs:ro"
+      ],
+      "flatpak_talk_names": ["org.freedesktop.Flatpak"]
+    },
+    {
+      "id": "opera-gx-snap",
+      "family": "opera-gx",
+      "packaging": "snap",
+      "enabled": true,
+      "nm_schema": "chromium",
+      "nm_base": "home",
+      "nm_path": "snap/opera-gx/common/opera/NativeMessagingHosts",
+      "desktop_ids": ["opera-gx_opera-gx.desktop", "opera-gx_opera-gx"],
+      "wm_classes": ["opera", "Opera"]
+    },
+    {
+      "id": "opera-gx",
+      "family": "opera-gx",
+      "packaging": "deb",
+      "enabled": true,
+      "nm_schema": "chromium",
+      "nm_base": "xdg_config",
+      "nm_path": "opera-gx/NativeMessagingHosts",
+      "desktop_ids": ["opera-gx.desktop", "opera-gx-stable.desktop", "opera-gx"],
+      "wm_classes": ["opera", "Opera"]
+    },
+    {
       "id": "vivaldi",
       "family": "vivaldi",
       "packaging": "deb",
@@ -156,10 +198,18 @@
       "nm_schema": "chromium",
       "nm_base": "home",
       "nm_path": "snap/chromium/common/chromium/NativeMessagingHosts",
-      "nm_path_aliases": [
-        ".config/chromium/NativeMessagingHosts"
-      ],
-      "desktop_ids": ["chromium_chromium.desktop", "chromium-browser.desktop", "chromium.desktop"],
+      "desktop_ids": ["chromium_chromium.desktop"],
+      "wm_classes": ["chromium", "chromium-browser", "Chromium-browser"]
+    },
+    {
+      "id": "chromium-deb",
+      "family": "chromium",
+      "packaging": "deb",
+      "enabled": true,
+      "nm_schema": "chromium",
+      "nm_base": "xdg_config",
+      "nm_path": "chromium/NativeMessagingHosts",
+      "desktop_ids": ["chromium.desktop", "chromium-browser.desktop"],
       "wm_classes": ["chromium", "chromium-browser", "Chromium-browser"]
     },
     {

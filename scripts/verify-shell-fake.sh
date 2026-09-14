@@ -28,7 +28,8 @@ grep -q '_showPeekStrip\|_makeCard' "$SRC" || fail "source missing peek strip"
 grep -q 'GdkPixbuf\|load_file_async\|TextureCache\|Clutter.Image' "$SRC" || fail "source missing thumb paint path"
 grep -q '_thumbActorFromDataUrl' "$SRC" || fail "source missing _thumbActorFromDataUrl"
 grep -q '_browserWindows' "$SRC" || fail "source missing minimized-capable window list"
-grep -q 'BROWSER_MATCHERS' "$SRC" || fail "source missing BROWSER_MATCHERS SSOT table"
+grep -q '_matchOperaGxFamily' "$SRC" || fail "source missing _matchOperaGxFamily"
+grep -q "'opera-gx'" "$SRC" || fail "source missing opera-gx peer siblings"
 grep -q '_matchBrowserApp' "$SRC" || fail "source missing _matchBrowserApp"
 if grep -q '_isBraveApp\|_braveWindows' "$SRC"; then
   fail "source still has Brave-only helpers (_isBraveApp / _braveWindows)"
@@ -44,7 +45,7 @@ if grep -q 'PopupImageMenuItem\|PopupMenuItem' "$SRC"; then
   fail "source still uses PopupMenuItem (ornament padding)"
 fi
 if [[ -f "$META" ]]; then
-  grep -q '"version": 21' "$META" || fail "metadata.json version must be 21"
+  grep -q '"version": 22' "$META" || fail "metadata.json version must be 22"
 fi
 
 # Every enabled registry id must appear in extension.js matcher table.

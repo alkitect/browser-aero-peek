@@ -3,7 +3,7 @@
   "description": "Linux/Ubuntu Dock: browser tab thumbnail strip on hover (Chromium-family + Firefox Snap/deb/Flatpak). Stock click unchanged. Author: alkitect.",
   "author": "alkitect",
   "uuid": "browser-tab-dock@alkitect",
-  "version": 21,
+  "version": 22,
   "shell-version": [
     "42"
   ],

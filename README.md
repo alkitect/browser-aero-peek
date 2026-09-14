@@ -15,16 +15,16 @@ Thumbnails are screenshots from the last time that tab was visible — Chromium 
 
 Dock **click** stays stock minimize-or-previews. Peek is hover-only.
 
-**At this tip (`v0.9.4`), the registry enables Chromium-family packaging variants (deb / Snap / Flatpak where listed), Microsoft Edge (deb + Flatpak), and Firefox (Snap + Mozilla `.deb` + Flatpak) with a durable AMO-signed add-on.** Tor Browser stays **Out** ([TOR-FEASIBILITY.md](docs/TOR-FEASIBILITY.md) FAIL). Live hover only works for packages you actually install.
+**At this tip (`v0.10.0`), the registry also enables Opera GX (deb/Snap/Flatpak) and native Chromium `.deb` (`chromium-deb`).** Tor Browser stays **Out** ([TOR-FEASIBILITY.md](docs/TOR-FEASIBILITY.md) FAIL). Live hover only works for packages you actually install.
 
 ## Who this is for
 
 See **[docs/BROWSER-SUPPORT.md](docs/BROWSER-SUPPORT.md)** for the full In / Planned / Out matrix and enabled/disabled NM semantics.
 
-- **In (registry):** Brave / Chrome / Opera / Vivaldi / Chromium / Edge packaging rows in `config/browsers.json`; Firefox Snap / Mozilla `.deb` / Flatpak
+- **In (registry):** Brave / Chrome / Opera / Opera GX / Vivaldi / Chromium / Edge packaging rows in `config/browsers.json`; Firefox Snap / Mozilla `.deb` / Flatpak
 - **In (this machine):** whatever of those packages you have installed — NM JSON is written for all enabled rows; Flatpak overrides apply only when the Flatpak app exists
-- **Out:** Tor Browser (feasibility FAIL); GNOME Web; non-GNOME desktops
-- **Shell:** Ubuntu 22.04 + GNOME Shell 42 **Wayland**, Ubuntu Dock; **one** logout/in after Shell matcher changes
+- **Out:** Tor Browser (feasibility FAIL); GNOME Web; beta/dev/nightly channels; Chrome Snap / Edge Snap / Ubuntu transitional Chromium deb (N/A)
+- **Shell:** Ubuntu 22.04 + GNOME Shell 42 **Wayland**, Ubuntu Dock; **one** logout/in after Shell matcher changes (metadata **22**)
 
 ## Quick start
 

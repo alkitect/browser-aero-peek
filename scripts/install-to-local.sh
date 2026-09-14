@@ -100,7 +100,7 @@ def needs_stage(entry: dict) -> bool:
         return True
     if entry.get("packaging") in ("snap", "flatpak"):
         return True
-    if bid in ("vivaldi", "edge"):
+    if bid in ("vivaldi", "edge", "opera-gx", "chromium-deb"):
         return True
     return False
 
@@ -159,6 +159,26 @@ def resolve_nm_dir(entry, rel: str) -> Path:
     if base == "home":
         return home / rel
     raise ValueError(f"bad nm_base {base!r}")
+
+# Fail-closed: two enabled Chromium-schema lanes must not write the same NM directory.
+# Mozilla lanes intentionally share ~/.mozilla/native-messaging-hosts (portal SSOT).
+_seen_nm: dict[str, str] = {}
+for _e in data["browsers"]:
+    if not _e.get("enabled"):
+        continue
+    if _e.get("nm_schema") == "mozilla":
+        continue
+    _bid = _e["id"]
+    for _rel in [_e["nm_path"]] + list(_e.get("nm_path_aliases") or []):
+        _key = str(resolve_nm_dir(_e, _rel).resolve())
+        if _key in _seen_nm:
+            print(
+                f"Refusing install: NM path collision {_key} "
+                f"({_seen_nm[_key]} vs {_bid})",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        _seen_nm[_key] = _bid
 
 def harden_dir(nm_dir: Path) -> None:
     nm_dir.mkdir(parents=True, exist_ok=True)

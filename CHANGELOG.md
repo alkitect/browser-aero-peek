@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+## 0.10.0
+
+- Packaging delta: Opera GX (`.deb` / Snap / Flatpak `com.opera.opera-gx`) registry In; Shell Opera GX family before Opera (metadata **22**).
+- Chromium native `chromium-deb` In; Snap Chromium drops `.config/chromium` NM alias; install fail-closes on Chromium-schema NM path collision (mozilla portal share allowed).
+- Docs: RPM parity for native `packaging: deb` lanes; beta/dev/nightly stay Out; [GX-MEASURE.md](docs/GX-MEASURE.md).
+- Durable AMO-signed `.xpi` remains **0.9.3** (no resign — WebExt sources unchanged).
+
 ## 0.9.4
 
 - Docs: packaging coverage N/A table (Chrome Snap / Ubuntu Chromium `.deb` / Edge Snap) and beta/channel Out follow-ups.

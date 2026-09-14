@@ -86,6 +86,21 @@ const BROWSER_MATCHERS = [
         wmClasses: [],
     },
     {
+        id: 'opera-gx-flatpak',
+        desktopIds: ['com.opera.opera-gx.desktop'],
+        wmClasses: [],
+    },
+    {
+        id: 'opera-gx-snap',
+        desktopIds: ['opera-gx_opera-gx.desktop', 'opera-gx_opera-gx'],
+        wmClasses: ['opera', 'Opera'],
+    },
+    {
+        id: 'opera-gx',
+        desktopIds: ['opera-gx.desktop', 'opera-gx-stable.desktop', 'opera-gx'],
+        wmClasses: ['opera', 'Opera'],
+    },
+    {
         id: 'opera-snap',
         desktopIds: ['opera_opera.desktop', 'opera_opera'],
         wmClasses: ['opera', 'Opera'],
@@ -117,7 +132,12 @@ const BROWSER_MATCHERS = [
     },
     {
         id: 'chromium',
-        desktopIds: ['chromium_chromium.desktop', 'chromium-browser.desktop', 'chromium.desktop'],
+        desktopIds: ['chromium_chromium.desktop'],
+        wmClasses: ['chromium', 'chromium-browser', 'Chromium-browser'],
+    },
+    {
+        id: 'chromium-deb',
+        desktopIds: ['chromium.desktop', 'chromium-browser.desktop'],
         wmClasses: ['chromium', 'chromium-browser', 'Chromium-browser'],
     },
     {
@@ -333,8 +353,30 @@ function _appExecLower(app) {
     }
 }
 
+/** Opera GX before Opera — shared StartupWMClass=Opera. */
+function _matchOperaGxFamily(app, id, wm) {
+    if (id === 'com.opera.opera-gx.desktop')
+        return 'opera-gx-flatpak';
+    if (id === 'opera-gx_opera-gx.desktop' || id === 'opera-gx_opera-gx')
+        return 'opera-gx-snap';
+    if (id === 'opera-gx.desktop' || id === 'opera-gx-stable.desktop' || id === 'opera-gx')
+        return 'opera-gx';
+    const exec = _appExecLower(app);
+    if (exec.includes('flatpak') && (id.includes('opera-gx') || id.includes('opera.opera-gx')))
+        return 'opera-gx-flatpak';
+    if (id.startsWith('com.opera.opera-gx'))
+        return 'opera-gx-flatpak';
+    if (exec.includes('/snap/') && (exec.includes('opera-gx') || id.includes('opera-gx_opera-gx')))
+        return 'opera-gx-snap';
+    if (id.includes('opera-gx') || id.includes('opera_gx'))
+        return 'opera-gx';
+    return null;
+}
+
 /** Opera .deb / Snap / Flatpak share StartupWMClass=Opera — disambiguate by desktop id / Exec. */
 function _matchOperaFamily(app, id, wm) {
+    if (id.includes('opera-gx') || id.includes('opera_gx') || id.startsWith('com.opera.opera-gx'))
+        return null;
     if (id === 'com.opera.opera.desktop')
         return 'opera-flatpak';
     if (id === 'opera_opera.desktop' || id === 'opera_opera')
@@ -342,12 +384,32 @@ function _matchOperaFamily(app, id, wm) {
     if (id === 'opera.desktop' || id === 'opera' || id === 'opera-browser.desktop')
         return 'opera';
     const exec = _appExecLower(app);
+    if (exec.includes('opera-gx'))
+        return null;
     if (exec.includes('flatpak') || id.startsWith('com.opera.'))
         return 'opera-flatpak';
     if (exec.includes('/snap/') || exec.includes('snap/bin/opera') || id.includes('opera_opera'))
         return 'opera-snap';
     if (wm === 'opera')
         return 'opera';
+    return null;
+}
+
+/** Chromium Snap vs native .deb — Snap desktop id first. */
+function _matchChromiumFamily(app, id, wm) {
+    if (id === 'org.chromium.chromium.desktop')
+        return 'chromium-flatpak';
+    if (id === 'chromium_chromium.desktop' || id === 'chromium_chromium')
+        return 'chromium';
+    if (id === 'chromium.desktop' || id === 'chromium-browser.desktop' || id === 'chromium-browser')
+        return 'chromium-deb';
+    const exec = _appExecLower(app);
+    if (exec.includes('flatpak') || id.startsWith('org.chromium.'))
+        return 'chromium-flatpak';
+    if (exec.includes('/snap/') || exec.includes('snap/bin/chromium') || id.includes('chromium_chromium'))
+        return 'chromium';
+    if (wm === 'chromium' || wm === 'chromium-browser')
+        return 'chromium-deb';
     return null;
 }
 
@@ -420,6 +482,9 @@ function _matchBrowserApp(app) {
             wm = String(raw).toLowerCase();
     } catch (_e) { /* ignore */ }
     if (id.includes('opera') || wm === 'opera') {
+        const gxId = _matchOperaGxFamily(app, id, wm);
+        if (gxId)
+            return gxId;
         const operaId = _matchOperaFamily(app, id, wm);
         if (operaId)
             return operaId;
@@ -439,11 +504,18 @@ function _matchBrowserApp(app) {
         if (firefoxId)
             return firefoxId;
     }
+    if (id.includes('chromium') || wm === 'chromium' || wm === 'chromium-browser') {
+        const chromiumId = _matchChromiumFamily(app, id, wm);
+        if (chromiumId)
+            return chromiumId;
+    }
     const skipFamily = {
         opera: 1, 'opera-flatpak': 1, 'opera-snap': 1,
+        'opera-gx': 1, 'opera-gx-flatpak': 1, 'opera-gx-snap': 1,
         brave: 1, 'brave-flatpak': 1, 'brave-snap': 1,
         vivaldi: 1, 'vivaldi-flatpak': 1, 'vivaldi-snap': 1,
         firefox: 1, 'firefox-flatpak': 1, 'firefox-deb': 1,
+        chromium: 1, 'chromium-flatpak': 1, 'chromium-deb': 1,
     };
     for (const m of BROWSER_MATCHERS) {
         if (skipFamily[m.id])
@@ -464,8 +536,10 @@ function _matchBrowserApp(app) {
 function _peerSiblings(browserId) {
     const families = {
         opera: ['opera', 'opera-flatpak', 'opera-snap'],
+        'opera-gx': ['opera-gx', 'opera-gx-flatpak', 'opera-gx-snap'],
         brave: ['brave', 'brave-flatpak', 'brave-snap'],
         vivaldi: ['vivaldi', 'vivaldi-flatpak', 'vivaldi-snap'],
+        chromium: ['chromium', 'chromium-flatpak', 'chromium-deb'],
         // Durable AMO .xpi hellos as firefox — prefer that peer when dock matches deb/Flatpak.
         firefox: ['firefox', 'firefox-flatpak', 'firefox-deb'],
     };
