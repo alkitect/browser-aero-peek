@@ -1,83 +1,128 @@
 # Browser Aero peek
 
-Hover your browser on the Ubuntu Dock and pick a **tab** from thumbnails — Aero-style peek for Linux.
+Hover the Ubuntu Dock icon for tab titles and thumbnails when you run one browser window with many tabs. Window peeks on hover stay stock when you have several windows.
 
+[Quick start](#quick-start) · [BROWSER-SUPPORT](docs/BROWSER-SUPPORT.md) · [Releases](https://github.com/alkitect/browser-aero-peek/releases) · [License](#license)
+
+Latest release notes: [CHANGELOG.md](CHANGELOG.md) and [GitHub Releases](https://github.com/alkitect/browser-aero-peek/releases). A plain `git clone` follows the default branch tip unless you check out a tag; prefer a tagged release for day-to-day use.
 
 ## What this does
 
-Ubuntu Dock shows **window** previews when you click a browser. Tabs? Hover does nothing — so you restore the window and hunt the strip.
+With several windows of the same browser, Ubuntu Dock already peeks those windows when you hover the icon. With a single window and a pile of tabs, hover still does nothing for tabs: you have to dig through the tab strip inside the browser.
 
-Pause on the dock icon and you get titles, favicons, and **cached** page thumbnails. Click a card; that tab comes forward.
+![Browser tab peek on Ubuntu Dock - hover a browser icon to see title and thumbnail cards](docs/images/ubuntu-dock-brave-aero-peek.png)
 
-Thumbnails are screenshots from the last time that tab was visible — Chromium can’t capture background tabs live. Treat them like page content on the local session bus (details under **Limits & safety**).
+This adds the missing piece: hover the dock icon and you get tab titles, favicons, and cached page thumbnails. Click a card to bring that tab forward. Dock click stays stock; tab peek is hover-only.
 
-![Brave Aero peek on Ubuntu Dock — hover the Brave icon to see tab title and thumbnail cards](docs/images/ubuntu-dock-brave-aero-peek.png)
-
-Dock **click** stays stock minimize-or-previews. Peek is hover-only.
-
-**At this tip (`v0.10.0`), the registry also enables Opera GX (deb/Snap/Flatpak) and native Chromium `.deb` (`chromium-deb`).** Tor Browser stays **Out** ([TOR-FEASIBILITY.md](docs/TOR-FEASIBILITY.md) FAIL). Live hover only works for packages you actually install.
+Thumbnails are screenshots from the last time that tab was visible on screen. Browsers cannot give live shots of background tabs, so treat thumbs like page content on your local session bus (see Limits & safety).
 
 ## Who this is for
 
-See **[docs/BROWSER-SUPPORT.md](docs/BROWSER-SUPPORT.md)** for the full In / Planned / Out matrix and enabled/disabled NM semantics.
+This is for Ubuntu 22.04 with GNOME on Wayland and the Ubuntu Dock (`systemd --user`, permission to enable Shell extensions). You already run at least one browser from the table below (`.deb`, Snap, or Flatpak where the vendor ships it), and you often keep many tabs in one window.
 
-- **In (registry):** Brave / Chrome / Opera / Opera GX / Vivaldi / Chromium / Edge packaging rows in `config/browsers.json`; Firefox Snap / Mozilla `.deb` / Flatpak
-- **In (this machine):** whatever of those packages you have installed — NM JSON is written for all enabled rows; Flatpak overrides apply only when the Flatpak app exists
-- **Out:** Tor Browser (feasibility FAIL); GNOME Web; beta/dev/nightly channels; Chrome Snap / Edge Snap / Ubuntu transitional Chromium deb (N/A)
-- **Shell:** Ubuntu 22.04 + GNOME Shell 42 **Wayland**, Ubuntu Dock; **one** logout/in after Shell matcher changes (metadata **22**)
+It is not for Tor Browser, GNOME Web, beta/dev/nightly builds, Windows or macOS, or desktops that are not GNOME with Ubuntu Dock. Those stay out of scope.
+
+### Supported browsers
+
+| Browser  | `.deb` | Snap | Flatpak |
+| -------- |:------:|:----:|:-------:|
+| Brave    | Yes    | Yes  | Yes     |
+| Chrome   | Yes    | N/A  | Yes     |
+| Opera    | Yes    | Yes  | Yes     |
+| Opera GX | Yes    | Yes  | Yes     |
+| Vivaldi  | Yes    | Yes  | Yes     |
+| Chromium | Yes    | Yes  | Yes     |
+| Edge     | Yes    | N/A  | Yes     |
+| Firefox  | Yes    | Yes  | Yes     |
+
+N/A = vendor does not ship that channel (Chrome Snap and Edge Snap do not exist). Full matrix: [docs/BROWSER-SUPPORT.md](docs/BROWSER-SUPPORT.md).
+
+<details>
+<summary>Chromium on Ubuntu: Snap vs .deb</summary>
+
+If you installed Chromium from Ubuntu Software or as a Snap, use the Snap column. Ubuntu’s old `chromium-browser` apt package only redirects to Snap and is not a separate `.deb` lane here. “Chromium `.deb`” means a native Debian-style package that owns `~/.config/chromium`, not that transitional apt package.
+
+</details>
 
 ## Quick start
+
+Install puts three layers on your user account: a small background host, native-messaging hooks (JSON files that let each browser start that host), and a GNOME Shell extension. On hover, that extension can draw a tab peek strip when you have one window of that browser with enough tabs. `--enable-automation` turns on the user systemd unit so the host starts with your session; it is not sudoers and not system-wide.
+
+Then: [Install](#install) → [Load the browser add-on](#1-load-the-browser-add-on) → [Enable the Shell extension](#2-enable-the-shell-extension) → [Try hover](#3-try-hover).
+
+### Install
+
+Needs: Ubuntu 22.04 with GNOME on Wayland and Ubuntu Dock, `systemd --user`, and permission to enable Shell extensions.
+
+Stable path: clone or download a release tag from [Releases](https://github.com/alkitect/browser-aero-peek/releases), then run the install script below. Tip of `main` is fine for contributors tracking unreleased work.
 
 ```bash
 git clone https://github.com/alkitect/browser-aero-peek.git
 cd browser-aero-peek
+# optional: git checkout vX.Y.Z   # pin to a release tag
 chmod +x scripts/*.sh
 ./scripts/install-to-local.sh --enable-automation
 ```
 
-**What you installed:** a user daemon (`alkitect-browser-tabs.service`), Native Messaging hooks for **each enabled** registry browser, staged MV3 folders under `~/.local/share/alkitect-browser-tabs/mv3-<id>/` where forced `browserId` is required, and Shell extension `browser-tab-dock@alkitect`. You still load the add-on in each browser and enable the Shell extension yourself.
+The script starts `alkitect-browser-tabs.service`, writes native-messaging hooks for each enabled browser row in `config/browsers.json` (whether or not that app is installed yet), and installs Shell extension `browser-tab-dock@alkitect`.
 
-**Load the add-on (pick what you run):**
+> You still load the browser add-on yourself and enable the Shell extension. Wayland needs one logout after enable.
 
-| Browser | Extensions page | Load path |
-|---------|-----------------|-----------|
-| Brave / Chrome / Opera **deb** | `brave://` / `chrome://` / `opera://extensions` | repo `browser-extension/` |
-| Edge **deb** | `edge://extensions` | staged `~/.local/share/alkitect-browser-tabs/mv3-edge/` |
-| Vivaldi **deb** | `vivaldi://extensions` | staged `mv3-vivaldi/` (forced id — reduced UA looks like Chrome) |
-| Snap / Flatpak Chromium-family | that browser’s extensions page | staged `mv3-<id>/` (remove portal `/run/…/doc/…` loads) |
-| Firefox Snap | `about:addons` | **Install Add-on From File** → `~/alkitect-browser-tabs/browser-tab-dock-signed.xpi` (AMO-signed; survives quit). Temporary fallback: `~/snap/firefox/common/alkitect-mv3-firefox.xpi` |
-| Firefox Mozilla `.deb` | same | Same durable `.xpi` (restart Firefox once after first install if NM was cold) |
-| Firefox Flatpak | same | Same durable `.xpi`; Shell peer-fallback maps dock → `firefox` NM peer |
+### 1. Load the browser add-on
 
-Confirm Chromium-family ID matches `browser-extension/extension-id.txt`. Fully quit/relaunch each browser, then `browser-tabs-host cli list --browser <id>`.
+Open that browser’s extensions page (for example `brave://extensions`, `chrome://extensions`, or `about:addons` on Firefox). Turn on Developer mode when the page offers it. “Load unpacked” means pick a folder from disk; Firefox uses Install Add-on From File and a signed `.xpi` instead.
 
-**Shell** — Wayland needs **one** logout after enable (and after Shell metadata / matcher changes):
+| If you use…                                                                                                            | Load this                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Brave / Chrome / Opera `.deb`                                                                                          | Repo folder `browser-extension/`                                                            |
+| Brave Snap / Flatpak, Chrome Flatpak, Edge, Vivaldi, Opera GX, Chromium Snap/Flatpak/native `.deb`, Opera Snap/Flatpak | `~/.local/share/alkitect-browser-tabs/mv3-<id>/` (for example `mv3-brave-snap`, `mv3-edge`) |
+| Firefox (Snap, Mozilla `.deb`, or Flatpak)                                                                             | `~/alkitect-browser-tabs/browser-tab-dock-signed.xpi` via Install Add-on From File          |
+
+Only Brave / Chrome / Opera `.deb` use the shared `browser-extension/` folder. Snap or Flatpak Brave must use the staged `mv3-brave-snap` or `mv3-brave-flatpak` path, not the repo folder.
+
+Do not load a Flatpak “portal” path under `/run/.../doc/...`; those folders disappear. Install creates the `mv3-<id>` folders for you.
+
+Firefox’s signed `.xpi` can lag the git product tag when only host/Shell/docs changed; see [CHANGELOG](CHANGELOG.md) and [AMO-FIREFOX.md](docs/AMO-FIREFOX.md).
+
+For Chromium-based browsers, confirm the extension ID matches `browser-extension/extension-id.txt`. Fully quit that browser (all windows) and open it again, then check the host can see the add-on. Pass the registry id for that packaging (`brave`, `brave-snap`, `firefox`, `firefox-flatpak`, and so on; see [BROWSER-SUPPORT.md](docs/BROWSER-SUPPORT.md)):
+
+```bash
+browser-tabs-host cli list --browser brave
+```
+
+### 2. Enable the Shell extension
+
+On Wayland, GNOME often needs a full logout/login before a new Shell extension actually runs. Enable, then log out and back in once:
 
 ```bash
 gnome-extensions enable browser-tab-dock@alkitect
 # log out and back in once
 ```
 
-**Try it** — one window per installed browser with ≥2 tabs; hover that dock icon; click a card. Dock click stays stock.
+### 3. Try hover
 
-**Needs:** Ubuntu GNOME Wayland, at least one enabled browser package, `systemd --user`, and permission to enable GNOME Shell extensions.
+Open one window of that browser with at least two normal (non-private) tabs. Pause briefly on the dock icon (a short dwell is enough). You should see a strip of title/favicon/thumbnail cards; click a card to select that tab and bring its window forward. Dock click stays unchanged. Several windows open instead? Stock hover still shows window peeks.
 
 ## Check it works
 
-You want the hover strip to appear, a card click to focus that tab, and dock click unchanged.
+The real test is hover on one window with two or more tabs: the tab strip appears, a card click focuses that tab, and dock click still behaves like stock. If the strip never shows up, you probably skipped the logout, or the Shell extension is not enabled. If `cli list` says no extension, reload the add-on and fully quit the browser before trying again.
+
+<details>
+<summary>Optional confirmation scripts</summary>
+
+Host CLI, D-Bus, a fake Shell hover, then a human e2e checklist after logout:
 
 ```bash
 ./scripts/verify-host-cli.sh
 ./scripts/verify-dbus.sh
 ./scripts/verify-shell-fake.sh
-# After Shell reload / logout, human checklist:
+# After logout/in:
 ./scripts/verify-e2e.sh
 ```
 
-- If `cli list` says no extension: reload the unpacked add-on, quit Brave fully, relaunch, try again.
-- If hover does nothing after enable: confirm Wayland logout/in, then that `browser-tab-dock@alkitect` is enabled.
+</details>
 
-Maintainers: `./scripts/ci-check.sh`.
+Questions or a stuck install: open a GitHub [Issue](https://github.com/alkitect/browser-aero-peek/issues) or see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Support my work
 
@@ -91,38 +136,29 @@ Tip jar for the next desktop fix. Or a coffee so the next script stays boring on
 ./scripts/uninstall-from-local.sh
 ```
 
-Remove the add-on in `brave://extensions` if you loaded it unpacked. That step is manual.
+That removes the user daemon, native-messaging hooks, and the Shell extension files from your account. Browser add-ons stay until you remove them yourself (Load unpacked or Install from File). After Shell uninstall, log out once if the old peek strip still appears.
 
 ## How it works
 
-Three small pieces share tab state with the dock:
+A browser add-on lists tabs and caches visible-page thumbs. `browser-tabs-host` bridges native messaging to session D-Bus (the local bus for your desktop login). On hover dwell, the Shell extension asks for that list and draws the tab strip; choosing a card activates the tab in the browser and raises its window.
 
-| Piece | Role |
-|-------|------|
-| Brave MV3 add-on | Lists / activates tabs; inlines favicons; caches visible-tab PNG thumbs |
-| `browser-tabs-host` | Native messaging ↔ session D-Bus |
-| Shell extension | Hover dwell on the Ubuntu Dock → peek strip; raise the window after Activate |
+Names on disk: `browser-tabs-host`, `alkitect-browser-tabs.service`, Shell `browser-tab-dock@alkitect`, add-on “Browser Tab Dock”.
 
-Installed names: `browser-tabs-host`, `alkitect-browser-tabs.service`, Shell “Browser Aero Peek” (`browser-tab-dock@alkitect`, author: alkitect), browser add-on “Browser Tab Dock” (author: alkitect).
-
-Versions: MV3 `browser-extension/manifest.json` (git tags track this) · Shell `metadata.json` integer (GNOME scheme). Deeper reading: [ARCHITECTURE](docs/ARCHITECTURE.md) · [ADR-001](docs/architecture/ADR-001-ipc-and-dock-intercept.md) · [SECURITY](docs/SECURITY.md) · [Firefox AMO](docs/AMO-FIREFOX.md).
-
-## Related
-
-- **Deprecated Brave-only lane:** [alkitect/brave-aero-peek](https://github.com/alkitect/brave-aero-peek) — frozen; same host UUID/service. Do not use for new installs.
-- **Install clash:** Installing either product overwrites the same unit/UUID/NM hook. Do not alternate. Daily driver = **this** repo only.
+More detail: [ARCHITECTURE](docs/ARCHITECTURE.md), [ADR-001](docs/architecture/ADR-001-ipc-and-dock-intercept.md), [SECURITY](docs/SECURITY.md), [Firefox AMO](docs/AMO-FIREFOX.md).
 
 ## Limits & safety
 
-- **Linux + Ubuntu Dock + Brave/Chrome/Opera (`.deb` + Flatpak)/Vivaldi (`.deb`)/Chromium (Snap)/Firefox (Snap + Mozilla `.deb` + Flatpak) at this tip** — other OSes, docks, and browsers stay unsupported until their roadmap wave ships.
-- **One window per browser** with ≥2 tabs for peek; several windows of the same browser → no tab strip (stock window previews still work).
-- **Thumbnails are page screenshots** (more sensitive than titles). Same-UID processes on D-Bus or the host socket can read them — details in [SECURITY.md](docs/SECURITY.md).
-- Hover dwell and host rate limits reduce spam while scrubbing past the icon.
-- This GitHub repo is the **release source** for tagged releases and public docs — see [CONTRIBUTING.md](CONTRIBUTING.md).
+- Linux + Ubuntu Dock only. Browsers outside the table (and Tor / GNOME Web / beta) stay unsupported.
+- Tab peek needs one window per browser with at least two tabs. Several windows: stock hover window peeks still apply.
+- Thumbnails stay stale until you actually view that tab again; they are not live views of background tabs.
+- Private / incognito windows are not listed and not thumbnailed.
+- Thumbnails are page screenshots. Anything with your UID on D-Bus or the host socket can read them ([SECURITY.md](docs/SECURITY.md)).
+- Do not install [brave-aero-peek](https://github.com/alkitect/brave-aero-peek) alongside this. Same unit and UUID; last install wins. That repo is frozen.
+- This repo is the release source for tags and public docs ([CHANGELOG.md](CHANGELOG.md), [Releases](https://github.com/alkitect/browser-aero-peek/releases), [CONTRIBUTING.md](CONTRIBUTING.md)).
 
 ## License
 
-GPL-3.0-only — see [LICENSE](LICENSE).
+GPL-3.0-only. See [LICENSE](LICENSE).
 
 Copyright (C) 2026 alkitect
 

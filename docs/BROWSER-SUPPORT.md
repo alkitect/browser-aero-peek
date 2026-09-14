@@ -2,7 +2,7 @@
 
 Release-source matrix for **browser-aero-peek**. Runtime enablement is controlled by `config/browsers.json` (`enabled: true|false`). This document is the human-facing In/Out view.
 
-## At this tip (Unreleased / packaging delta)
+## At this tip (`v0.10.1`)
 
 | Browser | Packaging | Status | Notes |
 |---------|-----------|--------|--------|

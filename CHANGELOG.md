@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.10.1
+
+- Docs: promote portal-style root README (landing hierarchy, early screenshot, prereqs at Install, Issues/CONTRIBUTING help line, tip-vs-tag honesty).
+- Durable AMO-signed `.xpi` remains **0.9.3** (no resign; WebExt runtime unchanged).
+
 ## 0.10.0
 
 - Packaging delta: Opera GX (`.deb` / Snap / Flatpak `com.opera.opera-gx`) registry In; Shell Opera GX family before Opera (metadata **22**).

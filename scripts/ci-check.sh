@@ -38,6 +38,11 @@ if grep -qE '\bSSOT\b' README.md; then
   echo "ci-check: README must not use SSOT; say release source" >&2
   exit 1
 fi
+# Em-dash / en-dash are a common AI-tell; house style uses ASCII punctuation only.
+if grep -qP '[\x{2013}\x{2014}]' README.md 2>/dev/null || grep -q $'\u2013\|\u2014' README.md; then
+  echo "ci-check: README must not use en-dash/em-dash; use ASCII punctuation" >&2
+  exit 1
+fi
 
 [[ -f .github/FUNDING.yml ]] || { echo "ci-check: missing .github/FUNDING.yml" >&2; exit 1; }
 grep -qE '^[[:space:]]*ko_fi:[[:space:]]*alkitect[[:space:]]*$' .github/FUNDING.yml \
@@ -84,18 +89,18 @@ grep -qF 'EXT_ID_PLACEHOLDER' "${tmpl}" \
 # Version triad: First public tag stays v0.2.9; current release must match MV3 + CHANGELOG
 grep -qF 'First public tag: v0.2.9' docs/PUBLISH.md \
   || { echo "ci-check: docs/PUBLISH.md must record First public tag: v0.2.9" >&2; exit 1; }
-grep -qF 'Current tag: v0.10.0' docs/PUBLISH.md \
-  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.10.0" >&2; exit 1; }
+grep -qF 'Current tag: v0.10.1' docs/PUBLISH.md \
+  || { echo "ci-check: docs/PUBLISH.md must record Current tag: v0.10.1" >&2; exit 1; }
 python3 - <<'PY'
 import json, sys
 from pathlib import Path
 v = json.loads(Path("browser-extension/manifest.json").read_text())["version"]
-if v != "0.10.0":
-    print(f"ci-check: MV3 version {v!r} != 0.10.0", file=sys.stderr)
+if v != "0.10.1":
+    print(f"ci-check: MV3 version {v!r} != 0.10.1", file=sys.stderr)
     sys.exit(1)
 PY
-grep -qE '^## 0\.9\.3' CHANGELOG.md \
-  || { echo "ci-check: CHANGELOG missing ## 0.10.0" >&2; exit 1; }
+grep -qE '^## 0\.10\.1' CHANGELOG.md \
+  || { echo "ci-check: CHANGELOG missing ## 0.10.1" >&2; exit 1; }
 
 # Firefox AMO stage tree (FF140+/Android142 consent; no Chromium key in dist)
 bash -n scripts/stage-firefox-amo.sh

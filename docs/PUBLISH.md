@@ -8,7 +8,7 @@ README variant: B
 
 **First public tag: v0.2.9**
 
-**Current tag: v0.10.0**
+**Current tag: v0.10.1**
 
 **V-001 count (organic, not invent / not copy):**
 
@@ -31,17 +31,18 @@ README variant: B
 | `v0.9.2` | AMO re-sign durable Firefox `.xpi` to match product triad — **patch** |
 | `v0.9.4` | Docs: packaging N/A matrix (Chrome Snap / Ubuntu Chromium deb / Edge Snap) + beta Out — **patch** |
 | `v0.10.0` | Packaging delta: Opera GX trio + `chromium-deb` + Shell 22 + NM fail-closed — **minor** |
+| `v0.10.1` | Docs: portal-style root README promote (landing hierarchy) — **patch** |
 | `v0.9.3` | Clear AMO Android `data_collection_permissions` min-version warning (`gecko_android` 142) — **patch** |
 
-Version triad (current): PUBLISH `Current tag: v0.10.0` · MV3 `0.10.0` · CHANGELOG `## 0.10.0`. First public tag line stays `v0.2.9`. Durable AMO `.xpi` remains **0.9.3** until next resign.
+Version triad (current): PUBLISH `Current tag: v0.10.1` · MV3 `0.10.1` · CHANGELOG `## 0.10.1`. First public tag line stays `v0.2.9`. Durable AMO `.xpi` remains **0.9.3** until next resign.
 
 Never copy another alkitect repo’s tag. Use `RC-BEFORE-1.0` in this file only for an intentional 0.9.x RC.
 
 ```bash
 ./scripts/ci-check.sh
-git tag -a v0.10.0 -m "v0.10.0"
+git tag -a v0.10.1 -m "v0.10.1"
 git push origin main
-git push origin v0.10.0
+git push origin v0.10.1
 ```
 
 Repo URL: `https://github.com/alkitect/browser-aero-peek`
@@ -84,19 +85,19 @@ Priority order (**2026-09-13** — Linux-share for uncovered browsers first, the
 
 ## Human gate
 
-Published through **v0.10.0** (Opera GX + chromium-deb; durable AMO `.xpi` still 0.9.3).
+Published through **v0.10.1** (README portal landing; Opera GX + chromium-deb; durable AMO `.xpi` still 0.9.3).
 
 ## GitHub About
 
 | Field | Value |
 |-------|--------|
-| Description | Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera + Vivaldi + Chromium + Firefox (Snap/deb/Flatpak) |
+| Description | Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera/GX + Vivaldi + Chromium + Edge + Firefox (Snap/deb/Flatpak) |
 | Website | _(empty — tip via README Ko-fi badge)_ |
 | Topics | `linux`, `ubuntu`, `gnome`, `wayland`, `brave`, `chrome`, `opera`, `vivaldi`, `chromium`, `firefox`, `gnome-shell-extension`, `dock` |
 
 ```bash
 gh repo edit alkitect/browser-aero-peek \
-  --description "Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera + Vivaldi + Chromium + Firefox (Snap/deb/Flatpak)" \
+  --description "Linux Ubuntu Dock: multi-browser tab thumbnail strip on hover (GNOME Shell); Brave + Chrome + Opera/GX + Vivaldi + Chromium + Edge + Firefox (Snap/deb/Flatpak)" \
   --homepage "" \
   --add-topic linux --add-topic ubuntu --add-topic gnome \
   --add-topic wayland --add-topic brave --add-topic chromium --add-topic gnome-shell-extension \
